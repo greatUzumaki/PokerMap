@@ -1,0 +1,25 @@
+{
+  "name": "@pokermap/types",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/generated/schema.ts",
+    "./zod": "./src/zod.ts"
+  },
+  "files": ["src"],
+  "scripts": {
+    "types:gen": "openapi-typescript ../../apps/api/api/openapi.yaml -o src/generated/schema.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "echo 'no lint configured for @pokermap/types'"
+  },
+  "dependencies": {
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@pokermap/config": "workspace:*",
+    "openapi-typescript": "^7.5.0",
+    "typescript": "^5.7.2"
+  }
+}

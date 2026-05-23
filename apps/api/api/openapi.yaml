@@ -1,0 +1,398 @@
+openapi: 3.1.0
+info:
+  title: PokerMap API
+  version: "1.0.0"
+  description: REST API for the PokerMap SPb directory.
+servers:
+  - url: http://localhost:8080
+    description: local
+  - url: /
+    description: same-origin (when proxied by the web app)
+tags:
+  - name: auth
+  - name: clubs
+  - name: admin
+  - name: uploads
+  - name: health
+
+paths:
+  /healthz:
+    get:
+      tags: [health]
+      summary: Liveness probe
+      responses:
+        "200":
+          description: ok
+  /readyz:
+    get:
+      tags: [health]
+      summary: Readiness probe
+      responses:
+        "200":
+          description: ok
+        "503":
+          description: dependency unavailable
+
+  /v1/auth/telegram:
+    post:
+      tags: [auth]
+      summary: Verify Telegram initData and issue a session cookie.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TelegramAuthRequest"
+      responses:
+        "200":
+          description: session issued (Set-Cookie pm_session)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SessionUser" }
+        "401":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+  /v1/auth/logout:
+    post:
+      tags: [auth]
+      summary: Clear the session cookie.
+      responses:
+        "204":
+          description: cleared
+  /v1/auth/me:
+    get:
+      tags: [auth]
+      summary: Current session user
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SessionUser" }
+        "401":
+          $ref: "#/components/responses/Error"
+
+  /v1/clubs:
+    get:
+      tags: [clubs]
+      summary: List published clubs
+      parameters:
+        - in: query
+          name: cursor
+          schema: { type: string }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+        - in: query
+          name: bbox
+          description: "minLng,minLat,maxLng,maxLat"
+          schema: { type: string }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ClubsList" }
+  /v1/clubs/{slug}:
+    get:
+      tags: [clubs]
+      summary: Get a published club by slug
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Club" }
+        "404":
+          $ref: "#/components/responses/Error"
+
+  /v1/admin/clubs:
+    get:
+      tags: [admin]
+      summary: Admin club list (all statuses)
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+        - in: query
+          name: offset
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/Club" }
+                  total: { type: integer }
+        "403":
+          $ref: "#/components/responses/Error"
+    post:
+      tags: [admin]
+      summary: Create a club
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ClubCreate" }
+      responses:
+        "201":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Club" }
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+  /v1/admin/clubs/{id}:
+    get:
+      tags: [admin]
+      summary: Get any club by id (admin)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Club" }
+        "404":
+          $ref: "#/components/responses/Error"
+    put:
+      tags: [admin]
+      summary: Update a club
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ClubUpdate" }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Club" }
+    delete:
+      tags: [admin]
+      summary: Archive a club
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Club" }
+
+  /v1/admin/uploads/sign:
+    post:
+      tags: [uploads]
+      summary: Request a presigned MinIO PUT URL
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UploadSignRequest" }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UploadSignResponse" }
+        "413":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+
+components:
+  responses:
+    Error:
+      description: error
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiError" }
+
+  schemas:
+    ApiError:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string }
+            message: { type: string }
+            details:
+              type: array
+              items:
+                type: object
+                properties:
+                  field: { type: string }
+                  message: { type: string }
+            traceId: { type: string }
+    TelegramAuthRequest:
+      type: object
+      required: [initData]
+      properties:
+        initData: { type: string }
+    SessionUser:
+      type: object
+      required: [telegramUserId, isAdmin]
+      properties:
+        telegramUserId: { type: integer, format: int64 }
+        isAdmin: { type: boolean }
+        firstName: { type: string }
+        username: { type: string }
+    WorkingHoursSlot:
+      type: object
+      required: [open, close]
+      properties:
+        open: { type: string, pattern: "^([01]\\d|2[0-3]):[0-5]\\d$" }
+        close: { type: string, pattern: "^([01]\\d|2[0-3]):[0-5]\\d$" }
+    WorkingDay:
+      type: object
+      required: [closed, slots]
+      properties:
+        closed: { type: boolean }
+        slots:
+          type: array
+          maxItems: 4
+          items: { $ref: "#/components/schemas/WorkingHoursSlot" }
+    WorkingHours:
+      type: object
+      required: [mon, tue, wed, thu, fri, sat, sun]
+      properties:
+        mon: { $ref: "#/components/schemas/WorkingDay" }
+        tue: { $ref: "#/components/schemas/WorkingDay" }
+        wed: { $ref: "#/components/schemas/WorkingDay" }
+        thu: { $ref: "#/components/schemas/WorkingDay" }
+        fri: { $ref: "#/components/schemas/WorkingDay" }
+        sat: { $ref: "#/components/schemas/WorkingDay" }
+        sun: { $ref: "#/components/schemas/WorkingDay" }
+    Club:
+      type: object
+      required: [id, slug, name, address, lat, lng, status, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        slug: { type: string }
+        name: { type: string }
+        address: { type: string }
+        lat: { type: number }
+        lng: { type: number }
+        description: { type: string }
+        phones:
+          type: array
+          items: { type: string }
+        website: { type: string, nullable: true }
+        telegramUrl: { type: string, nullable: true }
+        workingHours: { $ref: "#/components/schemas/WorkingHours" }
+        games:
+          type: array
+          items:
+            type: string
+            enum: [NLH, PLO, PLO5, MTT, SnG, Mixed, Other]
+        minBuyInCents: { type: integer, nullable: true }
+        maxBuyInCents: { type: integer, nullable: true }
+        rakeDescription: { type: string }
+        photoKeys:
+          type: array
+          items: { type: string }
+        status:
+          type: string
+          enum: [draft, published, archived]
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    ClubCreate:
+      type: object
+      required: [slug, name, address, lat, lng, workingHours]
+      properties:
+        slug: { type: string }
+        name: { type: string }
+        address: { type: string }
+        lat: { type: number }
+        lng: { type: number }
+        description: { type: string }
+        phones:
+          type: array
+          items: { type: string }
+        website: { type: string, nullable: true }
+        telegramUrl: { type: string, nullable: true }
+        workingHours: { $ref: "#/components/schemas/WorkingHours" }
+        games:
+          type: array
+          items: { type: string }
+        minBuyInCents: { type: integer, nullable: true }
+        maxBuyInCents: { type: integer, nullable: true }
+        rakeDescription: { type: string }
+        photoKeys:
+          type: array
+          items: { type: string }
+        status:
+          type: string
+          enum: [draft, published, archived]
+    ClubUpdate:
+      type: object
+      properties:
+        slug: { type: string }
+        name: { type: string }
+        address: { type: string }
+        lat: { type: number }
+        lng: { type: number }
+        description: { type: string }
+        phones:
+          type: array
+          items: { type: string }
+        website: { type: string, nullable: true }
+        telegramUrl: { type: string, nullable: true }
+        workingHours: { $ref: "#/components/schemas/WorkingHours" }
+        games:
+          type: array
+          items: { type: string }
+        minBuyInCents: { type: integer, nullable: true }
+        maxBuyInCents: { type: integer, nullable: true }
+        rakeDescription: { type: string }
+        photoKeys:
+          type: array
+          items: { type: string }
+        status:
+          type: string
+          enum: [draft, published, archived]
+    ClubsList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Club" }
+        nextCursor: { type: string, nullable: true }
+    UploadSignRequest:
+      type: object
+      required: [filename, mime, size]
+      properties:
+        clubId: { type: string, format: uuid }
+        filename: { type: string }
+        mime:
+          type: string
+          enum: [image/jpeg, image/png, image/webp]
+        size: { type: integer, maximum: 8388608 }
+    UploadSignResponse:
+      type: object
+      required: [url, key, expiresAt]
+      properties:
+        url: { type: string }
+        key: { type: string }
+        expiresAt: { type: string, format: date-time }
