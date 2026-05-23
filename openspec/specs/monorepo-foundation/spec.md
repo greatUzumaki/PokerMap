@@ -1,0 +1,3 @@
+# monorepo-foundation
+
+## Requirements

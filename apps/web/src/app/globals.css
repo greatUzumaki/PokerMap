@@ -5,59 +5,52 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 142 71% 45%;
-    --primary-foreground: 144 70% 96%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 142 71% 45%;
-    --radius: 0.5rem;
+    /* Dark-only palette — single source of truth, no light/dark switcher. */
+    --background: 220 13% 8%;
+    --foreground: 220 9% 92%;
 
-    --tg-link: 211 100% 50%;
-    --tg-button: 211 100% 50%;
+    --card: 220 13% 11%;
+    --card-foreground: 220 9% 92%;
+
+    --popover: 220 13% 11%;
+    --popover-foreground: 220 9% 92%;
+
+    --primary: 142 60% 50%;
+    --primary-foreground: 220 13% 8%;
+
+    --secondary: 220 13% 16%;
+    --secondary-foreground: 220 9% 92%;
+
+    --muted: 220 13% 14%;
+    --muted-foreground: 220 6% 58%;
+
+    --accent: 220 13% 18%;
+    --accent-foreground: 220 9% 92%;
+
+    --destructive: 0 72% 50%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 220 13% 18%;
+    --input: 220 13% 18%;
+    --ring: 142 60% 50%;
+
+    --radius: 0.625rem;
+
+    --tg-link: 142 60% 60%;
+    --tg-button: 142 60% 50%;
     --tg-button-text: 0 0% 100%;
-    --tg-hint: 220 9% 46%;
-    --tg-secondary-bg: 210 40% 96.1%;
+    --tg-hint: 220 6% 58%;
+    --tg-secondary-bg: 220 13% 14%;
   }
 
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 142 71% 45%;
-    --primary-foreground: 144 70% 10%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 142 71% 45%;
+  html {
+    color-scheme: dark;
   }
 
   * {
     @apply border-border;
   }
+
   html,
   body {
     @apply bg-background text-foreground antialiased;
@@ -65,8 +58,26 @@
     height: var(--app-height, 100dvh);
     overscroll-behavior: none;
   }
+
   body {
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* MapLibre attribution control — dark variant */
+  .maplibregl-ctrl-attrib {
+    background: rgba(15, 17, 21, 0.75) !important;
+    color: hsl(var(--muted-foreground)) !important;
+  }
+  .maplibregl-ctrl-attrib a {
+    color: hsl(var(--muted-foreground)) !important;
+  }
+  .maplibregl-ctrl-group {
+    background: hsl(var(--card)) !important;
+    border-color: hsl(var(--border)) !important;
+  }
+  .maplibregl-ctrl-group button {
+    background: transparent !important;
+    filter: invert(0.9) hue-rotate(180deg);
   }
 }
 
