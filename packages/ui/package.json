@@ -3,7 +3,9 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "sideEffects": ["**/*.css"],
+  "sideEffects": [
+    "**/*.css"
+  ],
   "exports": {
     "./cn": "./src/cn.ts",
     "./tailwind-preset": "./src/tailwind-preset.ts",
@@ -26,7 +28,9 @@
     "./switch": "./src/components/switch.tsx",
     "./slider": "./src/components/slider.tsx"
   },
-  "files": ["src"],
+  "files": [
+    "src"
+  ],
   "scripts": {
     "lint": "echo 'no lint configured for @pokermap/ui'",
     "typecheck": "tsc --noEmit"
@@ -36,6 +40,7 @@
     "@radix-ui/react-dropdown-menu": "^2.1.4",
     "@radix-ui/react-label": "^2.1.1",
     "@radix-ui/react-separator": "^1.1.1",
+    "@radix-ui/react-slider": "^1.2.2",
     "@radix-ui/react-slot": "^1.1.1",
     "@radix-ui/react-tabs": "^1.1.2",
     "@radix-ui/react-tooltip": "^1.1.6",

@@ -46,7 +46,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <BottomNav />
           </TelegramProvider>
         </QueryProvider>
-        <Toaster position="top-center" theme="dark" richColors />
+        <Toaster position="top-center" theme="dark" richColors duration={3000} closeButton />
       </body>
     </html>
   );
