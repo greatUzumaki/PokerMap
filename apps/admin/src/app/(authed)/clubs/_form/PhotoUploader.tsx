@@ -62,7 +62,7 @@ export function PhotoUploader({
         <ul className="grid grid-cols-3 gap-2">
           {keys.map((k) => (
             <li key={k} className="relative">
-              <img src={`/api/media/${encodeURI(k)}`} alt="" className="aspect-video w-full rounded-md object-cover" />
+              <img src={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/media/${encodeURI(k)}`} alt="" className="aspect-video w-full rounded-md object-cover" />
               <Button
                 type="button"
                 variant="destructive"
