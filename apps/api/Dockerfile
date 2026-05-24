@@ -2,7 +2,7 @@
 # Build context is the monorepo root (CI: context=.). Paths are repo-relative.
 
 # --- builder ---
-FROM golang:1.23.4-alpine3.20 AS builder
+FROM golang:1.24.3-alpine3.20 AS builder
 WORKDIR /src
 
 RUN apk add --no-cache git ca-certificates
