@@ -9,8 +9,10 @@ const SESSION_COOKIE = "pm_session";
 export type LoginState = { ok: true } | { ok: false; message: string };
 
 export async function loginAction(_: LoginState | undefined, formData: FormData): Promise<LoginState> {
-  const username = String(formData.get("username") ?? "").trim();
-  const password = String(formData.get("password") ?? "");
+  const usernameRaw = formData.get("username");
+  const passwordRaw = formData.get("password");
+  const username = typeof usernameRaw === "string" ? usernameRaw.trim() : "";
+  const password = typeof passwordRaw === "string" ? passwordRaw : "";
 
   if (!username || !password) {
     return { ok: false, message: "Введите логин и пароль" };

@@ -3,8 +3,8 @@
 import Image from "next/image";
 import type { Club, WorkingHours } from "@pokermap/types";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from "@pokermap/ui/badge";
+import { Button } from "@pokermap/ui/button";
 import { Phone, Globe, Send, Navigation, MapPin } from "lucide-react";
 import { useTelegramHaptics } from "@/hooks/useTelegramHaptics";
 

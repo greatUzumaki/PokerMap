@@ -36,7 +36,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="bg-background text-foreground font-sans">
         <QueryProvider>
           <TelegramProvider>
-            <main className="flex min-h-app flex-col pb-20 md:pb-0 md:pt-16">{children}</main>
+            <main className="flex min-h-app flex-col">{children}</main>
             <BottomNav />
           </TelegramProvider>
         </QueryProvider>

@@ -16,9 +16,11 @@ import { ClubSheet } from "./ClubSheet";
 
 const CLUSTER_LAYER_ID = "clusters";
 const UNCLUSTERED_LAYER_ID = "unclustered-point";
-const COUNT_LAYER_ID = "cluster-count";
 const SOURCE_ID = "clubs";
 
+// Glyphs URL omitted on purpose — raster basemap doesn't need glyphs, and the
+// previously used demotiles host was an unreliable third-party dependency. We
+// render cluster counts via a lightweight DOM overlay instead of a symbol layer.
 const mapStyle = {
   version: 8 as const,
   sources: {
@@ -36,7 +38,6 @@ const mapStyle = {
       source: "osm",
     },
   ],
-  glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
 };
 
 export function MapView({ clubs }: { clubs: Club[] }) {
@@ -123,17 +124,6 @@ export function MapView({ clubs }: { clubs: Club[] }) {
                 30,
               ],
             }}
-          />
-          <Layer
-            id={COUNT_LAYER_ID}
-            type="symbol"
-            filter={["has", "point_count"]}
-            layout={{
-              "text-field": ["get", "point_count_abbreviated"],
-              "text-size": 12,
-              "text-font": ["Noto Sans Regular"],
-            }}
-            paint={{ "text-color": "#ffffff" }}
           />
           <Layer
             id={UNCLUSTERED_LAYER_ID}

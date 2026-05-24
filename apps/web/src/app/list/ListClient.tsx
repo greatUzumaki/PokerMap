@@ -2,9 +2,9 @@
 
 import { useMemo, useState } from "react";
 import type { Club } from "@pokermap/types";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Input } from "@pokermap/ui/input";
+import { Card, CardContent } from "@pokermap/ui/card";
+import { Badge } from "@pokermap/ui/badge";
 
 export function ListClient({ clubs }: { clubs: Club[] }) {
   const [q, setQ] = useState("");

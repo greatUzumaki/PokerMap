@@ -18,10 +18,13 @@ async function MapData() {
 
 export default function HomePage() {
   return (
-    <div className="relative h-app flex-1">
+    <div
+      data-test="map-container"
+      className="relative h-[calc(100dvh-5rem)] min-h-[400px] w-full md:h-[calc(100dvh-4rem)]"
+    >
       <Suspense
         fallback={
-          <div className="flex h-app flex-1 items-center justify-center text-sm text-muted-foreground">
+          <div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">
             Загружаем карту…
           </div>
         }

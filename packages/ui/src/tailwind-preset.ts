@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import animate from "tailwindcss-animate";
 
 const preset = {
   darkMode: ["class"],
@@ -44,6 +45,14 @@ const preset = {
         border: "hsl(var(--border) / <alpha-value>)",
         input: "hsl(var(--input) / <alpha-value>)",
         ring: "hsl(var(--ring) / <alpha-value>)",
+        sidebar: {
+          DEFAULT: "hsl(var(--sidebar-background) / <alpha-value>)",
+          foreground: "hsl(var(--sidebar-foreground) / <alpha-value>)",
+          accent: "hsl(var(--sidebar-accent) / <alpha-value>)",
+          "accent-foreground": "hsl(var(--sidebar-accent-foreground) / <alpha-value>)",
+          border: "hsl(var(--sidebar-border) / <alpha-value>)",
+          ring: "hsl(var(--sidebar-ring) / <alpha-value>)",
+        },
         tg: {
           link: "hsl(var(--tg-link) / <alpha-value>)",
           button: "hsl(var(--tg-button) / <alpha-value>)",
@@ -83,7 +92,7 @@ const preset = {
       },
     },
   },
-  plugins: [],
+  plugins: [animate],
 } satisfies Partial<Config>;
 
 export default preset;

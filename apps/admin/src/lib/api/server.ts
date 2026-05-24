@@ -47,3 +47,24 @@ export async function getAdminClub(id: string): Promise<Club | null> {
   if (!res.ok) throw new Error(`api admin get ${res.status}`);
   return Club.parse(await res.json());
 }
+
+export interface AdminOverview {
+  totals: { all: number; draft: number; published: number; archived: number };
+  recent: Club[];
+}
+
+export async function getAdminOverview(): Promise<AdminOverview> {
+  // Backend list endpoint has no status filter; fetch a large batch and count locally.
+  // PokerMap SPb scope (~tens of clubs) makes this cheap; revisit when scale demands.
+  const { items, total } = await listAdminClubs({ limit: 1000, offset: 0 });
+  const totals = { all: total, draft: 0, published: 0, archived: 0 };
+  for (const club of items) {
+    if (club.status === "draft") totals.draft += 1;
+    else if (club.status === "published") totals.published += 1;
+    else if (club.status === "archived") totals.archived += 1;
+  }
+  const recent = [...items]
+    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+    .slice(0, 5);
+  return { totals, recent };
+}

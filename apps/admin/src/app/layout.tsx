@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { Toaster } from "sonner";
 import { QueryProvider } from "@/components/providers/QueryProvider";
@@ -14,14 +14,19 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
+export const viewport: Viewport = {
+  themeColor: "#0b0e14",
+  colorScheme: "dark",
+};
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ru" className={inter.variable}>
-      <body className="bg-background text-foreground font-sans">
+    <html lang="ru" suppressHydrationWarning className={`${inter.variable} dark`}>
+      <body className="bg-background text-foreground font-sans antialiased">
         <QueryProvider>
           <AuthProvider>{children}</AuthProvider>
         </QueryProvider>
-        <Toaster position="top-center" richColors />
+        <Toaster position="top-center" theme="dark" richColors />
       </body>
     </html>
   );

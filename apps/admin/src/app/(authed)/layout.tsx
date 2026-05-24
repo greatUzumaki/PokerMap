@@ -1,27 +1,29 @@
-import Link from "next/link";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { SidebarInset, SidebarProvider } from "@pokermap/ui/sidebar";
 import { getSession } from "@/lib/api/server";
-import { LogoutButton } from "@/components/LogoutButton";
+import { AppHeader } from "@/components/shell/AppHeader";
+import { AppSidebar } from "@/components/shell/AppSidebar";
 
 export const dynamic = "force-dynamic";
+
+const SIDEBAR_COOKIE = "sidebar:state";
 
 export default async function AuthedLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();
   if (!session?.isAdmin) {
     redirect("/login");
   }
+  const store = await cookies();
+  const defaultOpen = store.get(SIDEBAR_COOKIE)?.value !== "false";
+
   return (
-    <div className="mx-auto w-full max-w-5xl px-4 py-4">
-      <header className="mb-6 flex items-center justify-between border-b pb-4">
-        <Link href="/" className="text-xl font-semibold">
-          PokerMap · Админка
-        </Link>
-        <div className="flex items-center gap-3 text-sm text-muted-foreground">
-          <span>{session.firstName ?? session.username ?? `tg:${session.telegramUserId}`}</span>
-          <LogoutButton />
-        </div>
-      </header>
-      {children}
-    </div>
+    <SidebarProvider defaultOpen={defaultOpen}>
+      <AppSidebar user={session} />
+      <SidebarInset>
+        <AppHeader user={session} />
+        <div className="flex-1 p-4 md:p-6">{children}</div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

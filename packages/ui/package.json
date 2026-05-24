@@ -13,7 +13,16 @@
     "./label": "./src/components/label.tsx",
     "./textarea": "./src/components/textarea.tsx",
     "./card": "./src/components/card.tsx",
-    "./badge": "./src/components/badge.tsx"
+    "./badge": "./src/components/badge.tsx",
+    "./sidebar": "./src/components/sidebar.tsx",
+    "./table": "./src/components/table.tsx",
+    "./tabs": "./src/components/tabs.tsx",
+    "./dropdown-menu": "./src/components/dropdown-menu.tsx",
+    "./breadcrumb": "./src/components/breadcrumb.tsx",
+    "./separator": "./src/components/separator.tsx",
+    "./tooltip": "./src/components/tooltip.tsx",
+    "./sheet": "./src/components/sheet.tsx",
+    "./skeleton": "./src/components/skeleton.tsx"
   },
   "files": ["src"],
   "scripts": {
@@ -21,11 +30,18 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@radix-ui/react-dialog": "^1.1.4",
+    "@radix-ui/react-dropdown-menu": "^2.1.4",
     "@radix-ui/react-label": "^2.1.1",
+    "@radix-ui/react-separator": "^1.1.1",
     "@radix-ui/react-slot": "^1.1.1",
+    "@radix-ui/react-tabs": "^1.1.2",
+    "@radix-ui/react-tooltip": "^1.1.6",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "tailwind-merge": "^2.5.5"
+    "lucide-react": "^0.469.0",
+    "tailwind-merge": "^2.5.5",
+    "tailwindcss-animate": "^1.0.7"
   },
   "peerDependencies": {
     "react": ">=19.0.0"

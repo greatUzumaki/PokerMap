@@ -1,54 +1,16 @@
+@import "@pokermap/ui/globals.css";
 @import "maplibre-gl/dist/maplibre-gl.css";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
-  :root {
-    /* Dark-only palette — single source of truth, no light/dark switcher. */
-    --background: 220 13% 8%;
-    --foreground: 220 9% 92%;
-
-    --card: 220 13% 11%;
-    --card-foreground: 220 9% 92%;
-
-    --popover: 220 13% 11%;
-    --popover-foreground: 220 9% 92%;
-
-    --primary: 142 60% 50%;
-    --primary-foreground: 220 13% 8%;
-
-    --secondary: 220 13% 16%;
-    --secondary-foreground: 220 9% 92%;
-
-    --muted: 220 13% 14%;
-    --muted-foreground: 220 6% 58%;
-
-    --accent: 220 13% 18%;
-    --accent-foreground: 220 9% 92%;
-
-    --destructive: 0 72% 50%;
-    --destructive-foreground: 0 0% 98%;
-
-    --border: 220 13% 18%;
-    --input: 220 13% 18%;
-    --ring: 142 60% 50%;
-
-    --radius: 0.625rem;
-
-    --tg-link: 142 60% 60%;
-    --tg-button: 142 60% 50%;
-    --tg-button-text: 0 0% 100%;
-    --tg-hint: 220 6% 58%;
-    --tg-secondary-bg: 220 13% 14%;
+  * {
+    @apply border-border;
   }
 
   html {
     color-scheme: dark;
-  }
-
-  * {
-    @apply border-border;
   }
 
   html,
