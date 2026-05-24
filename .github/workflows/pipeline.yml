@@ -283,6 +283,9 @@ jobs:
           if [ "$ok" = "1" ]; then
             printf "%s\tok\t%s\t%s\n" "$ts" "$SHA" "$prev" >> deploys.log
             echo "$SHA" > .last-good
+            # Keep the last 72h of unreferenced images for fast rollback,
+            # nuke older ones so the VPS disk does not creep up over time.
+            docker image prune -af --filter "until=72h" || true
           else
             printf "%s\trolled-back\t%s\t%s\n" "$ts" "$SHA" "$prev" >> deploys.log
             if [ -n "$prev" ]; then
