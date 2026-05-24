@@ -23,7 +23,7 @@ describe("OpenInMapsButton URL builders", () => {
     expect(googleMapsWebUrl(target)).toBe("https://www.google.com/maps/search/?api=1&query=59.9,30.3");
   });
   it("apple maps url encodes address", () => {
-    expect(appleMapsUrl(target)).toBe("maps://?daddr=59.9,30.3&q=%D0%A4%D1%83%D1%80%D1%88%D1%82%D0%B0%D1%82%D1%81%D0%BA%D0%B0%D1%8F%2044");
+    expect(appleMapsUrl(target)).toBe("https://maps.apple.com/?daddr=59.9,30.3&q=%D0%A4%D1%83%D1%80%D1%88%D1%82%D0%B0%D1%82%D1%81%D0%BA%D0%B0%D1%8F%2044");
   });
   it("geo intent encodes name", () => {
     expect(geoIntent(target)).toBe("geo:59.9,30.3?q=59.9,30.3(Bluff)");
@@ -47,7 +47,7 @@ describe("detectPlatform", () => {
 
 describe("urlForPlatform", () => {
   it("ios → apple maps", () => {
-    expect(urlForPlatform(target, "ios").startsWith("maps://")).toBe(true);
+    expect(urlForPlatform(target, "ios").startsWith("https://maps.apple.com/")).toBe(true);
   });
   it("android → geo:", () => {
     expect(urlForPlatform(target, "android").startsWith("geo:")).toBe(true);

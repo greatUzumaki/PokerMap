@@ -6,7 +6,7 @@ import type { Club, WorkingHours } from "@pokermap/types";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
 import { Badge } from "@pokermap/ui/badge";
 import { Button } from "@pokermap/ui/button";
-import { Phone, Globe, Send, MapPin, ExternalLink } from "lucide-react";
+import { Phone, Globe, Send, MapPin } from "lucide-react";
 import { OpenInMapsButton } from "@/components/OpenInMapsButton";
 import { TrackOnView } from "@/components/track/TrackOnView";
 
@@ -146,8 +146,12 @@ export function ClubSheet({
 
         <DrawerFooter className="gap-2">
           <Button asChild size="lg" className="w-full">
-            <Link href={`/clubs/${club.slug}`} prefetch={false}>
-              <ExternalLink className="h-4 w-4" aria-hidden /> Подробнее
+            <Link
+              href={`/clubs/${club.slug}`}
+              prefetch={false}
+              onClick={() => onOpenChange(false)}
+            >
+              Подробнее
             </Link>
           </Button>
           <OpenInMapsButton

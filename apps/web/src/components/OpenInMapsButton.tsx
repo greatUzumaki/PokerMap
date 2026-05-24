@@ -1,7 +1,16 @@
 "use client";
 
+import { useState } from "react";
 import { ExternalLink } from "lucide-react";
 import { Button } from "@pokermap/ui/button";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerFooter,
+  DrawerClose,
+} from "@/components/ui/drawer";
 import { track } from "@/lib/track";
 
 export type MapsTarget = { lat: number; lng: number; name: string; address: string };
@@ -33,20 +42,18 @@ export function googleMapsWebUrl({ lat, lng }: MapsTarget): string {
   return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
 }
 
+// Universal link form — iOS Safari resolves it to the native Apple Maps app
+// without triggering the unknown-protocol block that `maps://` hits.
 export function appleMapsUrl({ lat, lng, address }: MapsTarget): string {
-  return `maps://?daddr=${lat},${lng}&q=${encodeURIComponent(address)}`;
+  return `https://maps.apple.com/?daddr=${lat},${lng}&q=${encodeURIComponent(address)}`;
 }
 
 export function geoIntent({ lat, lng, name }: MapsTarget): string {
   return `geo:${lat},${lng}?q=${lat},${lng}(${encodeURIComponent(name)})`;
 }
 
-// Pick the URL whose protocol gives the user the native app picker (or the
-// single sensible default) on their device.
-//   - Android `geo:` triggers the system chooser → user picks Google Maps /
-//     2GIS / Yandex.Maps from installed apps.
-//   - iOS `maps://` opens Apple Maps (iOS does not expose a cross-app picker).
-//   - Telegram WebApp + desktop fall back to the Yandex web URL.
+// Kept for backwards-compat with the URL-builder tests; the component itself
+// now lets the user pick a provider rather than auto-routing per platform.
 export function urlForPlatform(target: MapsTarget, platform: Platform): string {
   switch (platform) {
     case "ios":
@@ -59,6 +66,19 @@ export function urlForPlatform(target: MapsTarget, platform: Platform): string {
       return yandexWebUrl(target);
   }
 }
+
+type Provider = {
+  id: "apple" | "yandex" | "twogis" | "google";
+  label: string;
+  url: (t: MapsTarget) => string;
+};
+
+const PROVIDERS: Provider[] = [
+  { id: "yandex", label: "Яндекс Карты", url: yandexWebUrl },
+  { id: "twogis", label: "2ГИС", url: twogisWebUrl },
+  { id: "apple", label: "Apple Карты", url: appleMapsUrl },
+  { id: "google", label: "Google Maps", url: googleMapsWebUrl },
+];
 
 export interface OpenInMapsButtonProps {
   target: MapsTarget;
@@ -73,28 +93,61 @@ export function OpenInMapsButton({
   size = "default",
   variant = "default",
 }: OpenInMapsButtonProps) {
-  const onClick = () => {
-    const ua = typeof navigator === "undefined" ? "" : navigator.userAgent;
+  const [open, setOpen] = useState(false);
+
+  const openWith = (provider: Provider) => {
+    const url = provider.url(target);
     const tg = typeof window !== "undefined" && Boolean(window.Telegram?.WebApp?.openLink);
-    const platform = detectPlatform(ua, tg);
-    const url = urlForPlatform(target, platform);
-
-    track("web.openinmaps_click", { name: target.name, platform });
-
-    if (platform === "telegram") {
+    track("web.openinmaps_click", { name: target.name, provider: provider.id });
+    setOpen(false);
+    if (tg) {
       window.Telegram!.WebApp!.openLink!(url);
-      return;
-    }
-    if (url.startsWith("geo:") || url.startsWith("maps:")) {
-      window.location.href = url;
       return;
     }
     window.open(url, "_blank", "noopener");
   };
 
   return (
-    <Button type="button" size={size} variant={variant} className={className} onClick={onClick}>
-      Открыть в картах <ExternalLink className="ml-1.5 h-4 w-4" aria-hidden />
-    </Button>
+    <>
+      <Button
+        type="button"
+        size={size}
+        variant={variant}
+        className={className}
+        onClick={() => setOpen(true)}
+      >
+        Открыть в картах <ExternalLink className="ml-1.5 h-4 w-4" aria-hidden />
+      </Button>
+
+      <Drawer open={open} onOpenChange={setOpen}>
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle>Открыть в картах</DrawerTitle>
+            <p className="text-sm text-muted-foreground">{target.address}</p>
+          </DrawerHeader>
+          <div className="flex flex-col gap-2 px-4 pb-2">
+            {PROVIDERS.map((p) => (
+              <Button
+                key={p.id}
+                type="button"
+                variant="outline"
+                size="lg"
+                className="w-full justify-start"
+                onClick={() => openWith(p)}
+              >
+                {p.label}
+              </Button>
+            ))}
+          </div>
+          <DrawerFooter>
+            <DrawerClose asChild>
+              <Button type="button" variant="ghost" className="w-full">
+                Отмена
+              </Button>
+            </DrawerClose>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+    </>
   );
 }

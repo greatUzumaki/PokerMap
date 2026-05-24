@@ -269,6 +269,15 @@ jobs:
             done
           done
 
+          # Seed the SPb sport-poker catalog. Idempotent (UPSERT inside one tx),
+          # best-effort — a failure here logs a warning but does not roll back
+          # the deploy. The seed binary lives inside the api image.
+          if [ "$ok" = "1" ]; then
+            if ! docker exec poker-api seed; then
+              echo "seed: WARNING — catalog seed failed; deploy continues" >&2
+            fi
+          fi
+
           ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           prev="$(cat .last-good 2>/dev/null || echo "")"
           if [ "$ok" = "1" ]; then

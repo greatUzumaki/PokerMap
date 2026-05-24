@@ -106,16 +106,14 @@ var spbClubs = []db.CreateClubParams{
 	},
 
 	// source: https://spb-poker-club.ru/ + https://t.me/spb_poker_club, checked: 2026-05-24
-	// NOTE: venue rotates between Loft Plan B (Арсенальная 2) and Обводный 118АУ;
-	// admin should update address per actual booking.
 	{
 		Slug:    "spb-poker-club",
 		Name:    "SPB Poker Club",
-		Address: "Санкт-Петербург, наб. Обводного канала, 118АУ (актуальная локация — в TG-канале)",
-		Lat:     59.9148,
-		Lng:     30.3460,
-		Description: "Спортивный покер не на деньги. Регулярные турниры: Nit Stack для новичков, " +
-			"классический Boom Pot, нокаут-турнир Mystery. Регистрация и адрес — в TG-канале.",
+		Address: "Санкт-Петербург, ул. Арсенальная, 2 (Лофт План Б)",
+		Lat:     59.9577,
+		Lng:     30.3691,
+		Description: "Спортивный покер не на деньги в Лофт План Б. Регулярные турниры: Nit Stack для новичков, " +
+			"классический Boom Pot, нокаут-турнир Mystery. Оргвзнос 1000 ₽. Регистрация — в TG-канале.",
 		Phones:          []string{},
 		Website:         ptrS("https://spb-poker-club.ru/"),
 		TelegramURL:     ptrS("https://t.me/spb_poker_club"),
@@ -158,6 +156,32 @@ var spbClubs = []db.CreateClubParams{
 			Instagram:       "https://www.instagram.com/pokerspb_club/",
 		}),
 		Status: db.ClubStatusDraft,
+	},
+
+	// source: https://2gis.ru/spb/search/Дойл + https://doylepoker.ru/, checked: 2026-05-24
+	{
+		Slug:    "doyle-poker-spb",
+		Name:    "Doyle Poker Club",
+		Address: "Санкт-Петербург, ул. Комсомола, 2",
+		Lat:     59.9544,
+		Lng:     30.3675,
+		Description: "Спортивный покер не на деньги. Турниры, рейтинговая система, " +
+			"собственное приложение клуба. Сеть в двух городах (СПб + Москва).",
+		Phones:          []string{"+7 (966) 755-18-83"},
+		Website:         ptrS("https://doylepoker.ru/"),
+		TelegramURL:     ptrS("https://t.me/doylemsk"),
+		WorkingHours:    mustJSON(everyDayHours("19:00", "02:00")),
+		Games:           []string{"NLH", "MTT"},
+		MinBuyInCents:   nil,
+		MaxBuyInCents:   nil,
+		EntryFeeCents:   ptrI64(100000),
+		RakeDescription: "",
+		PhotoKeys:       []string{},
+		ClubType:        string(clubs.ClubTypeMTTSeries),
+		SocialLinks: mustJSON(clubs.SocialLinks{
+			TelegramChannel: "https://t.me/doylemsk",
+		}),
+		Status: db.ClubStatusPublished,
 	},
 
 	// source: http://jokerclubspb.ru/ + https://t.me/joker_club_spb, checked: 2026-05-24
