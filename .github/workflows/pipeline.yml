@@ -1,19 +1,22 @@
-name: Deploy
+name: Pipeline
 
 on:
+  pull_request:
+    branches: [main]
   push:
     branches: [main]
   workflow_dispatch:
 
 concurrency:
-  group: deploy-poker
-  cancel-in-progress: false
+  group: pipeline-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
   packages: write
 
 env:
+  TURBO_TELEMETRY_DISABLED: "1"
   REGISTRY: ghcr.io
   IMAGE_PREFIX: pokermap
   PROJECT_NAME: poker
@@ -23,8 +26,45 @@ env:
   PUBLIC_MEDIA_URL: https://pargach.ru/poker/media
 
 jobs:
+  # ─── Stage 1: validate (always) ────────────────────────────────────────────
+  node:
+    name: Node — lint, typecheck, test
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+
+  go:
+    name: Go — vet, test
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: apps/api/go.mod
+          cache-dependency-path: apps/api/go.sum
+      - run: go vet ./...
+      - run: go test -race -count=1 ./...
+
+  # ─── Stage 2: build & push (push to main only, after validate) ─────────────
   build:
     name: Build & push ${{ matrix.app }}
+    needs: [node, go]
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -41,22 +81,18 @@ jobs:
             base_path: ""
     steps:
       - uses: actions/checkout@v4
-
       - uses: docker/setup-buildx-action@v3
-
       - name: Login to GHCR
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Lowercase owner
         id: owner
         env:
           OWNER: ${{ github.repository_owner }}
         run: echo "value=${OWNER,,}" >> "$GITHUB_OUTPUT"
-
       - name: Compute tags
         id: tags
         env:
@@ -71,7 +107,6 @@ jobs:
             echo "${IMG}:${SHA}"
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
-
       - name: Build & push
         uses: docker/build-push-action@v6
         with:
@@ -93,9 +128,11 @@ jobs:
             NEXT_PUBLIC_SUPPORT_TG=${{ vars.NEXT_PUBLIC_SUPPORT_TG }}
             MINIO_PUBLIC_URL=${{ env.PUBLIC_MEDIA_URL }}
 
+  # ─── Stage 3: deploy (push to main only, after build) ──────────────────────
   deploy:
     name: Deploy to VPS
     needs: build
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     environment: production
     env:
