@@ -210,8 +210,8 @@ GET    /readyz                     Readiness (db + minio + redis)
 POST   /v1/auth/telegram           Verify initData → issue cookie
 POST   /v1/auth/logout             Clear cookie
 GET    /v1/auth/me                 Current session user
-GET    /v1/clubs                   Public list (cursor pagination, optional bbox)
-GET    /v1/clubs/:slug             Public detail
+GET    /v1/clubs                   Public list (cursor pagination, optional bbox, filters: games, types, minBuyIn, maxBuyIn)
+GET    /v1/clubs/:slug             Public detail (rendered at web /clubs/:slug)
 GET    /v1/admin/clubs             Admin list (all statuses)
 POST   /v1/admin/clubs             Create
 GET    /v1/admin/clubs/:id         Detail (any status)
@@ -240,6 +240,26 @@ docker build -f apps/admin/Dockerfile -t pokermap-admin .
 ```
 
 ---
+
+## Seed catalog
+
+The real Saint Petersburg club catalog used by the API seeder lives in
+`apps/api/internal/seed/seed_spb.go`. Each entry cites the public source URL
+it was checked against. Edit that file (or use the admin panel) to keep the
+catalog up to date. `apps/api/internal/seed/seed.go` prunes the legacy demo
+slugs (`royal-poker-club`, `neva-cardroom`, …) on every run so the new
+catalog converges.
+
+The public map and `/list` accept filter query params that are also the
+URL-persistent state for the on-map filter pill:
+
+```
+?openNow=1                 # evaluated client-side using Europe/Moscow
+?games=NLH,PLO,MTT         # whitelist of game codes
+?types=cash,club           # whitelist of club_type values
+?minBuyIn=500000           # kopecks, inclusive overlap with declared range
+?maxBuyIn=5000000
+```
 
 ## OpenSpec workflow
 

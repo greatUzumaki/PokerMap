@@ -41,8 +41,11 @@ type Club struct {
 	Games           []string        `json:"games"`
 	MinBuyInCents   *int64          `json:"min_buy_in_cents"`
 	MaxBuyInCents   *int64          `json:"max_buy_in_cents"`
+	EntryFeeCents   *int64          `json:"entry_fee_cents"`
 	RakeDescription string          `json:"rake_description"`
 	PhotoKeys       []string        `json:"photo_keys"`
+	ClubType        string          `json:"club_type"`
+	SocialLinks     json.RawMessage `json:"social_links"`
 	Status          ClubStatus      `json:"status"`
 	CreatedAt       time.Time       `json:"created_at"`
 	UpdatedAt       time.Time       `json:"updated_at"`
@@ -75,15 +78,16 @@ func New(pool *pgxpool.Pool) *Queries {
 func (q *Queries) Pool() *pgxpool.Pool { return q.pool }
 
 const clubColumns = `id, slug, name, address, lat, lng, description, phones, website, telegram_url,
-working_hours, games, min_buy_in_cents, max_buy_in_cents, rake_description, photo_keys, status,
-created_at, updated_at`
+working_hours, games, min_buy_in_cents, max_buy_in_cents, entry_fee_cents, rake_description,
+photo_keys, club_type, social_links, status, created_at, updated_at`
 
 func scanClub(row pgx.Row) (Club, error) {
 	var c Club
 	err := row.Scan(
 		&c.ID, &c.Slug, &c.Name, &c.Address, &c.Lat, &c.Lng, &c.Description, &c.Phones,
 		&c.Website, &c.TelegramURL, &c.WorkingHours, &c.Games, &c.MinBuyInCents, &c.MaxBuyInCents,
-		&c.RakeDescription, &c.PhotoKeys, &c.Status, &c.CreatedAt, &c.UpdatedAt,
+		&c.EntryFeeCents, &c.RakeDescription, &c.PhotoKeys, &c.ClubType, &c.SocialLinks,
+		&c.Status, &c.CreatedAt, &c.UpdatedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Club{}, ErrNotFound
@@ -96,6 +100,14 @@ type ListPublishedClubsParams struct {
 	CursorCreatedAt                *time.Time
 	CursorID                       *uuid.UUID
 	Limit                          int32
+}
+
+type ListPublishedClubsFilteredParams struct {
+	ListPublishedClubsParams
+	Games     []string
+	Types     []string
+	MinBuyIn  *int64
+	MaxBuyIn  *int64
 }
 
 func (q *Queries) ListPublishedClubs(ctx context.Context, p ListPublishedClubsParams) ([]Club, error) {
@@ -129,6 +141,52 @@ func (q *Queries) ListPublishedClubs(ctx context.Context, p ListPublishedClubsPa
 		out = append(out, c)
 	}
 	return out, rows.Err()
+}
+
+func (q *Queries) ListPublishedClubsFiltered(ctx context.Context, p ListPublishedClubsFilteredParams) ([]Club, error) {
+	const sql = `
+		SELECT ` + clubColumns + `
+		FROM clubs
+		WHERE status = 'published'
+		  AND ($1::double precision IS NULL OR (
+		    lng BETWEEN $1 AND $2
+		    AND lat BETWEEN $3 AND $4
+		  ))
+		  AND ($5::timestamptz IS NULL OR (created_at, id) < ($5, $6))
+		  AND (cardinality($8::text[]) = 0 OR games && $8::text[])
+		  AND (cardinality($9::text[]) = 0 OR club_type::text = ANY($9::text[]))
+		  AND ($10::bigint IS NULL OR max_buy_in_cents IS NULL OR max_buy_in_cents >= $10)
+		  AND ($11::bigint IS NULL OR min_buy_in_cents IS NULL OR min_buy_in_cents <= $11)
+		ORDER BY created_at DESC, id DESC
+		LIMIT $7
+	`
+	rows, err := q.pool.Query(ctx, sql,
+		p.MinLng, p.MaxLng, p.MinLat, p.MaxLat,
+		p.CursorCreatedAt, p.CursorID, p.Limit,
+		orEmptyStrings(p.Games), orEmptyStrings(p.Types),
+		p.MinBuyIn, p.MaxBuyIn,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := make([]Club, 0, p.Limit)
+	for rows.Next() {
+		c, err := scanClub(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, c)
+	}
+	return out, rows.Err()
+}
+
+func orEmptyStrings(s []string) []string {
+	if s == nil {
+		return []string{}
+	}
+	return s
 }
 
 func (q *Queries) ListAllClubsAdmin(ctx context.Context, limit, offset int32) ([]Club, error) {
@@ -174,19 +232,29 @@ type CreateClubParams struct {
 	Phones, Games, PhotoKeys                          []string
 	Website, TelegramURL                              *string
 	WorkingHours                                      json.RawMessage
-	MinBuyInCents, MaxBuyInCents                      *int64
+	MinBuyInCents, MaxBuyInCents, EntryFeeCents       *int64
+	ClubType                                          string
+	SocialLinks                                       json.RawMessage
 	Status                                            ClubStatus
 }
 
 func (q *Queries) CreateClub(ctx context.Context, p CreateClubParams) (Club, error) {
+	if p.ClubType == "" {
+		p.ClubType = "cash"
+	}
+	if len(p.SocialLinks) == 0 {
+		p.SocialLinks = json.RawMessage(`{}`)
+	}
 	const sql = `
 		INSERT INTO clubs (slug, name, address, lat, lng, description, phones, website, telegram_url,
-			working_hours, games, min_buy_in_cents, max_buy_in_cents, rake_description, photo_keys, status)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+			working_hours, games, min_buy_in_cents, max_buy_in_cents, entry_fee_cents, rake_description,
+			photo_keys, club_type, social_links, status)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
 		RETURNING ` + clubColumns
 	return scanClub(q.pool.QueryRow(ctx, sql,
 		p.Slug, p.Name, p.Address, p.Lat, p.Lng, p.Description, p.Phones, p.Website, p.TelegramURL,
-		p.WorkingHours, p.Games, p.MinBuyInCents, p.MaxBuyInCents, p.RakeDescription, p.PhotoKeys, p.Status,
+		p.WorkingHours, p.Games, p.MinBuyInCents, p.MaxBuyInCents, p.EntryFeeCents, p.RakeDescription,
+		p.PhotoKeys, p.ClubType, p.SocialLinks, p.Status,
 	))
 }
 
@@ -205,8 +273,11 @@ type UpdateClubParams struct {
 	Games           []string
 	MinBuyInCents   *int64
 	MaxBuyInCents   *int64
+	EntryFeeCents   *int64
 	RakeDescription *string
 	PhotoKeys       []string
+	ClubType        *string
+	SocialLinks     json.RawMessage
 	Status          *ClubStatus
 }
 
@@ -226,14 +297,18 @@ func (q *Queries) UpdateClub(ctx context.Context, p UpdateClubParams) (Club, err
 			games            = COALESCE($12, games),
 			min_buy_in_cents = COALESCE($13, min_buy_in_cents),
 			max_buy_in_cents = COALESCE($14, max_buy_in_cents),
-			rake_description = COALESCE($15, rake_description),
-			photo_keys       = COALESCE($16, photo_keys),
-			status           = COALESCE($17, status)
+			entry_fee_cents  = COALESCE($15, entry_fee_cents),
+			rake_description = COALESCE($16, rake_description),
+			photo_keys       = COALESCE($17, photo_keys),
+			club_type        = COALESCE($18::club_type, club_type),
+			social_links     = COALESCE($19, social_links),
+			status           = COALESCE($20, status)
 		WHERE id = $1
 		RETURNING ` + clubColumns
 	return scanClub(q.pool.QueryRow(ctx, sql,
 		p.ID, p.Slug, p.Name, p.Address, p.Lat, p.Lng, p.Description, p.Phones, p.Website, p.TelegramURL,
-		p.WorkingHours, p.Games, p.MinBuyInCents, p.MaxBuyInCents, p.RakeDescription, p.PhotoKeys, p.Status,
+		p.WorkingHours, p.Games, p.MinBuyInCents, p.MaxBuyInCents, p.EntryFeeCents, p.RakeDescription,
+		p.PhotoKeys, p.ClubType, p.SocialLinks, p.Status,
 	))
 }
 

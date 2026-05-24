@@ -4,17 +4,44 @@ import { ListClient } from "./ListClient";
 
 export const dynamic = "force-dynamic";
 
-export default async function ListPage() {
+function parseList(value: string | string[] | undefined): string[] {
+  if (!value) return [];
+  const raw = Array.isArray(value) ? value.join(",") : value;
+  return raw.split(",").map((s) => s.trim()).filter(Boolean);
+}
+
+function parseNumber(value: string | string[] | undefined): number | undefined {
+  const raw = Array.isArray(value) ? value[0] : value;
+  if (!raw) return undefined;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+export default async function ListPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = await searchParams;
   let items: Awaited<ReturnType<typeof listPublishedClubs>>["items"] = [];
   try {
-    const data = await listPublishedClubs({ limit: 200 });
+    const opts: Parameters<typeof listPublishedClubs>[0] = { limit: 200 };
+    const games = parseList(sp.games);
+    if (games.length) opts.games = games;
+    const types = parseList(sp.types);
+    if (types.length) opts.types = types;
+    const minBuyIn = parseNumber(sp.minBuyIn);
+    if (minBuyIn != null) opts.minBuyIn = minBuyIn;
+    const maxBuyIn = parseNumber(sp.maxBuyIn);
+    if (maxBuyIn != null) opts.maxBuyIn = maxBuyIn;
+    const data = await listPublishedClubs(opts);
     items = data.items;
   } catch {
     items = [];
   }
 
-  const cash = items.filter((c) => c.games.some((g) => /кэш|cash/i.test(g)));
-  const tournaments = items.filter((c) => c.games.some((g) => /турнир|tournament|mtt/i.test(g)));
+  const cash = items.filter((c) => c.clubType === "cash" || c.games.some((g) => /кэш|cash|nlh|plo/i.test(g)));
+  const tournaments = items.filter((c) => c.clubType === "mtt-series" || c.games.some((g) => /турнир|tournament|mtt|sng/i.test(g)));
 
   return (
     <div className="min-h-app bg-background">

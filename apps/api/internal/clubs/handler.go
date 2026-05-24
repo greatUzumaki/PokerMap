@@ -3,6 +3,7 @@ package clubs
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -59,6 +60,10 @@ func (h *Handler) RegisterAdmin(r chi.Router) {
 
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
+	if q.Has("openNow") {
+		httpx.Error(w, r, http.StatusBadRequest, "invalid_filter", "openNow is evaluated client-side; do not pass it as a query param")
+		return
+	}
 	limit := parseLimit(q.Get("limit"), 50, 100)
 
 	cur, err := cursor.Decode(q.Get("cursor"))
@@ -66,10 +71,10 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, r, http.StatusBadRequest, "invalid_cursor", "invalid cursor")
 		return
 	}
-	params := db.ListPublishedClubsParams{Limit: int32(limit)}
+	base := db.ListPublishedClubsParams{Limit: int32(limit)}
 	if !cur.CreatedAt.IsZero() {
-		params.CursorCreatedAt = &cur.CreatedAt
-		params.CursorID = &cur.ID
+		base.CursorCreatedAt = &cur.CreatedAt
+		base.CursorID = &cur.ID
 	}
 	if bbox := q.Get("bbox"); bbox != "" {
 		parts := strings.Split(bbox, ",")
@@ -86,7 +91,28 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 			}
 			vals[i] = v
 		}
-		params.MinLng, params.MinLat, params.MaxLng, params.MaxLat = &vals[0], &vals[1], &vals[2], &vals[3]
+		base.MinLng, base.MinLat, base.MaxLng, base.MaxLat = &vals[0], &vals[1], &vals[2], &vals[3]
+	}
+
+	games, err := parseCSVWhitelist(q.Get("games"), validate.AllowedGames())
+	if err != nil {
+		httpx.Error(w, r, http.StatusBadRequest, "invalid_filter", "games: "+err.Error())
+		return
+	}
+	types, err := parseCSVWhitelist(q.Get("types"), validate.AllowedClubTypes())
+	if err != nil {
+		httpx.Error(w, r, http.StatusBadRequest, "invalid_filter", "types: "+err.Error())
+		return
+	}
+	minBuyIn, err := parseOptionalInt64(q.Get("minBuyIn"))
+	if err != nil {
+		httpx.Error(w, r, http.StatusBadRequest, "invalid_filter", "minBuyIn: "+err.Error())
+		return
+	}
+	maxBuyIn, err := parseOptionalInt64(q.Get("maxBuyIn"))
+	if err != nil {
+		httpx.Error(w, r, http.StatusBadRequest, "invalid_filter", "maxBuyIn: "+err.Error())
+		return
 	}
 
 	cacheKey := "clubs:list:" + r.URL.RawQuery
@@ -97,7 +123,18 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rows, err := h.Q.ListPublishedClubs(r.Context(), params)
+	var rows []db.Club
+	if len(games) > 0 || len(types) > 0 || minBuyIn != nil || maxBuyIn != nil {
+		rows, err = h.Q.ListPublishedClubsFiltered(r.Context(), db.ListPublishedClubsFilteredParams{
+			ListPublishedClubsParams: base,
+			Games:                    games,
+			Types:                    types,
+			MinBuyIn:                 minBuyIn,
+			MaxBuyIn:                 maxBuyIn,
+		})
+	} else {
+		rows, err = h.Q.ListPublishedClubs(r.Context(), base)
+	}
 	if err != nil {
 		httpx.Error(w, r, http.StatusInternalServerError, "internal", err.Error())
 		return
@@ -116,6 +153,44 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("X-Cache", "MISS")
 	httpx.JSON(w, http.StatusOK, out)
+}
+
+func parseCSVWhitelist(raw string, allowed map[string]struct{}) ([]string, error) {
+	if raw == "" {
+		return nil, nil
+	}
+	parts := strings.Split(raw, ",")
+	out := make([]string, 0, len(parts))
+	seen := map[string]struct{}{}
+	for _, p := range parts {
+		v := strings.TrimSpace(p)
+		if v == "" {
+			continue
+		}
+		if _, ok := allowed[v]; !ok {
+			return nil, fmt.Errorf("unknown value %q", v)
+		}
+		if _, dup := seen[v]; dup {
+			continue
+		}
+		seen[v] = struct{}{}
+		out = append(out, v)
+	}
+	return out, nil
+}
+
+func parseOptionalInt64(raw string) (*int64, error) {
+	if strings.TrimSpace(raw) == "" {
+		return nil, nil
+	}
+	n, err := strconv.ParseInt(raw, 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("must be an integer")
+	}
+	if n < 0 {
+		return nil, fmt.Errorf("must be >= 0")
+	}
+	return &n, nil
 }
 
 func (h *Handler) getBySlug(w http.ResponseWriter, r *http.Request) {
@@ -195,8 +270,19 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, r, http.StatusUnprocessableEntity, "validation", "validation failed", validate.Details(err)...)
 		return
 	}
-	if req.WorkingHours == nil {
-		req.WorkingHours = json.RawMessage(`{}`)
+	if err := req.WorkingHours.Validate(); err != nil {
+		httpx.Error(w, r, http.StatusBadRequest, "invalid_working_hours", err.Error())
+		return
+	}
+	whJSON, err := json.Marshal(req.WorkingHours)
+	if err != nil {
+		httpx.Error(w, r, http.StatusInternalServerError, "internal", err.Error())
+		return
+	}
+	slJSON, err := json.Marshal(req.SocialLinks)
+	if err != nil {
+		httpx.Error(w, r, http.StatusInternalServerError, "internal", err.Error())
+		return
 	}
 	status := db.ClubStatus(req.Status)
 	if status == "" {
@@ -212,12 +298,15 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		Phones:          orEmpty(req.Phones),
 		Website:         req.Website,
 		TelegramURL:     req.TelegramURL,
-		WorkingHours:    req.WorkingHours,
+		WorkingHours:    whJSON,
 		Games:           orEmpty(req.Games),
 		MinBuyInCents:   req.MinBuyInCents,
 		MaxBuyInCents:   req.MaxBuyInCents,
+		EntryFeeCents:   req.EntryFeeCents,
 		RakeDescription: req.RakeDescription,
 		PhotoKeys:       orEmpty(req.PhotoKeys),
+		ClubType:        req.ClubType,
+		SocialLinks:     slJSON,
 		Status:          status,
 	})
 	if err != nil {
@@ -264,6 +353,26 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 		s := db.ClubStatus(*req.Status)
 		status = &s
 	}
+	var whJSON json.RawMessage
+	if req.WorkingHours != nil {
+		if err := req.WorkingHours.Validate(); err != nil {
+			httpx.Error(w, r, http.StatusBadRequest, "invalid_working_hours", err.Error())
+			return
+		}
+		whJSON, err = json.Marshal(*req.WorkingHours)
+		if err != nil {
+			httpx.Error(w, r, http.StatusInternalServerError, "internal", err.Error())
+			return
+		}
+	}
+	var slJSON json.RawMessage
+	if req.SocialLinks != nil {
+		slJSON, err = json.Marshal(*req.SocialLinks)
+		if err != nil {
+			httpx.Error(w, r, http.StatusInternalServerError, "internal", err.Error())
+			return
+		}
+	}
 	after, err := h.Q.UpdateClub(r.Context(), db.UpdateClubParams{
 		ID:              id,
 		Slug:            req.Slug,
@@ -275,12 +384,15 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 		Phones:          req.Phones,
 		Website:         req.Website,
 		TelegramURL:     req.TelegramURL,
-		WorkingHours:    req.WorkingHours,
+		WorkingHours:    whJSON,
 		Games:           req.Games,
 		MinBuyInCents:   req.MinBuyInCents,
 		MaxBuyInCents:   req.MaxBuyInCents,
+		EntryFeeCents:   req.EntryFeeCents,
 		RakeDescription: req.RakeDescription,
 		PhotoKeys:       req.PhotoKeys,
+		ClubType:        req.ClubType,
+		SocialLinks:     slJSON,
 		Status:          status,
 	})
 	if err != nil {

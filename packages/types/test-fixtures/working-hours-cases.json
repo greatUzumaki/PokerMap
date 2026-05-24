@@ -1,0 +1,128 @@
+[
+  {
+    "name": "open during same-day slot",
+    "hours": {
+      "mon": { "closed": false, "slots": [{ "open": "12:00", "close": "20:00" }] },
+      "tue": { "closed": true, "slots": [] },
+      "wed": { "closed": true, "slots": [] },
+      "thu": { "closed": true, "slots": [] },
+      "fri": { "closed": true, "slots": [] },
+      "sat": { "closed": true, "slots": [] },
+      "sun": { "closed": true, "slots": [] }
+    },
+    "now": "2026-05-25T11:30:00Z",
+    "tz": "Europe/Moscow",
+    "expected": true
+  },
+  {
+    "name": "closed before slot opens",
+    "hours": {
+      "mon": { "closed": false, "slots": [{ "open": "12:00", "close": "20:00" }] },
+      "tue": { "closed": true, "slots": [] },
+      "wed": { "closed": true, "slots": [] },
+      "thu": { "closed": true, "slots": [] },
+      "fri": { "closed": true, "slots": [] },
+      "sat": { "closed": true, "slots": [] },
+      "sun": { "closed": true, "slots": [] }
+    },
+    "now": "2026-05-25T08:59:00Z",
+    "tz": "Europe/Moscow",
+    "expected": false
+  },
+  {
+    "name": "close boundary is exclusive",
+    "hours": {
+      "mon": { "closed": false, "slots": [{ "open": "12:00", "close": "20:00" }] },
+      "tue": { "closed": true, "slots": [] },
+      "wed": { "closed": true, "slots": [] },
+      "thu": { "closed": true, "slots": [] },
+      "fri": { "closed": true, "slots": [] },
+      "sat": { "closed": true, "slots": [] },
+      "sun": { "closed": true, "slots": [] }
+    },
+    "now": "2026-05-25T17:00:00Z",
+    "tz": "Europe/Moscow",
+    "expected": false
+  },
+  {
+    "name": "open boundary is inclusive",
+    "hours": {
+      "mon": { "closed": false, "slots": [{ "open": "12:00", "close": "20:00" }] },
+      "tue": { "closed": true, "slots": [] },
+      "wed": { "closed": true, "slots": [] },
+      "thu": { "closed": true, "slots": [] },
+      "fri": { "closed": true, "slots": [] },
+      "sat": { "closed": true, "slots": [] },
+      "sun": { "closed": true, "slots": [] }
+    },
+    "now": "2026-05-25T09:00:00Z",
+    "tz": "Europe/Moscow",
+    "expected": true
+  },
+  {
+    "name": "open inside overnight slot before midnight",
+    "hours": {
+      "mon": { "closed": true, "slots": [] },
+      "tue": { "closed": true, "slots": [] },
+      "wed": { "closed": true, "slots": [] },
+      "thu": { "closed": true, "slots": [] },
+      "fri": { "closed": false, "slots": [{ "open": "20:00", "close": "06:00" }] },
+      "sat": { "closed": false, "slots": [{ "open": "20:00", "close": "06:00" }] },
+      "sun": { "closed": true, "slots": [] }
+    },
+    "now": "2026-05-29T20:30:00Z",
+    "tz": "Europe/Moscow",
+    "expected": true
+  },
+  {
+    "name": "open inside overnight slot after midnight (previous day owns it)",
+    "hours": {
+      "mon": { "closed": true, "slots": [] },
+      "tue": { "closed": true, "slots": [] },
+      "wed": { "closed": true, "slots": [] },
+      "thu": { "closed": true, "slots": [] },
+      "fri": { "closed": false, "slots": [{ "open": "20:00", "close": "06:00" }] },
+      "sat": { "closed": true, "slots": [] },
+      "sun": { "closed": true, "slots": [] }
+    },
+    "now": "2026-05-29T23:30:00Z",
+    "tz": "Europe/Moscow",
+    "expected": true
+  },
+  {
+    "name": "day marked closed returns false",
+    "hours": {
+      "mon": { "closed": false, "slots": [{ "open": "12:00", "close": "20:00" }] },
+      "tue": { "closed": false, "slots": [{ "open": "12:00", "close": "20:00" }] },
+      "wed": { "closed": false, "slots": [{ "open": "12:00", "close": "20:00" }] },
+      "thu": { "closed": false, "slots": [{ "open": "12:00", "close": "20:00" }] },
+      "fri": { "closed": false, "slots": [{ "open": "12:00", "close": "20:00" }] },
+      "sat": { "closed": false, "slots": [{ "open": "12:00", "close": "20:00" }] },
+      "sun": { "closed": true, "slots": [] }
+    },
+    "now": "2026-05-31T11:30:00Z",
+    "tz": "Europe/Moscow",
+    "expected": false
+  },
+  {
+    "name": "multiple slots same day (between slots = closed)",
+    "hours": {
+      "mon": {
+        "closed": false,
+        "slots": [
+          { "open": "10:00", "close": "14:00" },
+          { "open": "18:00", "close": "22:00" }
+        ]
+      },
+      "tue": { "closed": true, "slots": [] },
+      "wed": { "closed": true, "slots": [] },
+      "thu": { "closed": true, "slots": [] },
+      "fri": { "closed": true, "slots": [] },
+      "sat": { "closed": true, "slots": [] },
+      "sun": { "closed": true, "slots": [] }
+    },
+    "now": "2026-05-25T13:00:00Z",
+    "tz": "Europe/Moscow",
+    "expected": false
+  }
+]

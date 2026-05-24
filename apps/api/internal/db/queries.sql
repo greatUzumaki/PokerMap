@@ -15,6 +15,28 @@ WHERE status = 'published'
 ORDER BY created_at DESC, id DESC
 LIMIT sqlc.arg('lim');
 
+-- name: ListPublishedClubsFiltered :many
+-- Same as ListPublishedClubs plus optional filters on games (array overlap),
+-- club_type (whitelist) and buy-in bounds (range overlap).
+SELECT *
+FROM clubs
+WHERE status = 'published'
+  AND (
+    sqlc.narg('min_lng')::double precision IS NULL
+    OR (lng BETWEEN sqlc.narg('min_lng')::double precision AND sqlc.narg('max_lng')::double precision
+        AND lat BETWEEN sqlc.narg('min_lat')::double precision AND sqlc.narg('max_lat')::double precision)
+  )
+  AND (
+    sqlc.narg('cursor_created_at')::timestamptz IS NULL
+    OR (created_at, id) < (sqlc.narg('cursor_created_at')::timestamptz, sqlc.narg('cursor_id')::uuid)
+  )
+  AND (cardinality(sqlc.arg('games')::text[]) = 0 OR games && sqlc.arg('games')::text[])
+  AND (cardinality(sqlc.arg('types')::text[]) = 0 OR club_type::text = ANY(sqlc.arg('types')::text[]))
+  AND (sqlc.narg('min_buy_in')::bigint IS NULL OR max_buy_in_cents IS NULL OR max_buy_in_cents >= sqlc.narg('min_buy_in'))
+  AND (sqlc.narg('max_buy_in')::bigint IS NULL OR min_buy_in_cents IS NULL OR min_buy_in_cents <= sqlc.narg('max_buy_in'))
+ORDER BY created_at DESC, id DESC
+LIMIT sqlc.arg('lim');
+
 -- name: ListAllClubsAdmin :many
 SELECT *
 FROM clubs
@@ -37,13 +59,14 @@ WHERE id = sqlc.arg('id');
 -- name: CreateClub :one
 INSERT INTO clubs (
   slug, name, address, lat, lng, description, phones, website, telegram_url,
-  working_hours, games, min_buy_in_cents, max_buy_in_cents, rake_description,
-  photo_keys, status
+  working_hours, games, min_buy_in_cents, max_buy_in_cents, entry_fee_cents,
+  rake_description, photo_keys, club_type, social_links, status
 ) VALUES (
   sqlc.arg('slug'), sqlc.arg('name'), sqlc.arg('address'), sqlc.arg('lat'), sqlc.arg('lng'),
   sqlc.arg('description'), sqlc.arg('phones'), sqlc.narg('website'), sqlc.narg('telegram_url'),
   sqlc.arg('working_hours'), sqlc.arg('games'), sqlc.narg('min_buy_in_cents'),
-  sqlc.narg('max_buy_in_cents'), sqlc.arg('rake_description'), sqlc.arg('photo_keys'),
+  sqlc.narg('max_buy_in_cents'), sqlc.narg('entry_fee_cents'), sqlc.arg('rake_description'),
+  sqlc.arg('photo_keys'), sqlc.arg('club_type'), sqlc.arg('social_links'),
   sqlc.arg('status')
 )
 RETURNING *;
@@ -63,8 +86,11 @@ UPDATE clubs SET
   games            = COALESCE(sqlc.narg('games'), games),
   min_buy_in_cents = COALESCE(sqlc.narg('min_buy_in_cents'), min_buy_in_cents),
   max_buy_in_cents = COALESCE(sqlc.narg('max_buy_in_cents'), max_buy_in_cents),
+  entry_fee_cents  = COALESCE(sqlc.narg('entry_fee_cents'), entry_fee_cents),
   rake_description = COALESCE(sqlc.narg('rake_description'), rake_description),
   photo_keys       = COALESCE(sqlc.narg('photo_keys'), photo_keys),
+  club_type        = COALESCE(sqlc.narg('club_type')::club_type, club_type),
+  social_links     = COALESCE(sqlc.narg('social_links'), social_links),
   status           = COALESCE(sqlc.narg('status'), status)
 WHERE id = sqlc.arg('id')
 RETURNING *;

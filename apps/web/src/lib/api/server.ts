@@ -2,10 +2,23 @@ import "server-only";
 import { Club, ClubsList } from "@pokermap/types";
 import { serverApiUrl } from "@/lib/env";
 
-export async function listPublishedClubs(opts: { limit?: number; bbox?: string } = {}): Promise<ClubsList> {
+export interface ListPublishedClubsOpts {
+  limit?: number;
+  bbox?: string;
+  games?: string[];
+  types?: string[];
+  minBuyIn?: number;
+  maxBuyIn?: number;
+}
+
+export async function listPublishedClubs(opts: ListPublishedClubsOpts = {}): Promise<ClubsList> {
   const qs = new URLSearchParams();
   if (opts.limit) qs.set("limit", String(opts.limit));
   if (opts.bbox) qs.set("bbox", opts.bbox);
+  if (opts.games?.length) qs.set("games", opts.games.join(","));
+  if (opts.types?.length) qs.set("types", opts.types.join(","));
+  if (opts.minBuyIn != null) qs.set("minBuyIn", String(opts.minBuyIn));
+  if (opts.maxBuyIn != null) qs.set("maxBuyIn", String(opts.maxBuyIn));
   const res = await fetch(`${serverApiUrl()}/v1/clubs?${qs}`, {
     next: { revalidate: 60, tags: ["clubs"] },
   });

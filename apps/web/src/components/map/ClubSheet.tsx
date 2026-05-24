@@ -1,12 +1,14 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
+import type { Route } from "next";
 import type { Club, WorkingHours } from "@pokermap/types";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
 import { Badge } from "@pokermap/ui/badge";
 import { Button } from "@pokermap/ui/button";
-import { Phone, Globe, Send, Navigation, MapPin } from "lucide-react";
-import { useTelegramHaptics } from "@/hooks/useTelegramHaptics";
+import { Phone, Globe, Send, MapPin, ExternalLink } from "lucide-react";
+import { OpenInMapsButton } from "@/components/OpenInMapsButton";
 
 const DAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
 const DAY_LABELS: Record<(typeof DAYS)[number], string> = {
@@ -41,17 +43,7 @@ export function ClubSheet({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const { impact, notify } = useTelegramHaptics();
-
   if (!club) return null;
-
-  const buildRoute = () => {
-    impact("medium");
-    notify("success");
-    const url = `https://maps.google.com/?q=${club.lat},${club.lng}`;
-    window.open(url, "_blank", "noopener");
-  };
-
   const today = todayKey();
 
   return (
@@ -151,10 +143,16 @@ export function ClubSheet({
           </section>
         </div>
 
-        <DrawerFooter>
-          <Button onClick={buildRoute} size="lg" className="w-full">
-            <Navigation className="h-4 w-4" aria-hidden /> Построить маршрут
+        <DrawerFooter className="gap-2">
+          <Button asChild size="lg" className="w-full">
+            <Link href={`/clubs/${club.slug}` as Route} prefetch={false}>
+              <ExternalLink className="h-4 w-4" aria-hidden /> Подробнее
+            </Link>
           </Button>
+          <OpenInMapsButton
+            target={{ lat: club.lat, lng: club.lng, name: club.name, address: club.address }}
+            className="w-full"
+          />
         </DrawerFooter>
       </DrawerContent>
     </Drawer>

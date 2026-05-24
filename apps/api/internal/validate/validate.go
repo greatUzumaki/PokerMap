@@ -13,15 +13,22 @@ import (
 )
 
 var (
-	slugRegex     = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$`)
-	allowedGames  = map[string]struct{}{"NLH": {}, "PLO": {}, "PLO5": {}, "MTT": {}, "SnG": {}, "Mixed": {}, "Other": {}}
-	allowedStatus = map[string]struct{}{"draft": {}, "published": {}, "archived": {}}
+	slugRegex        = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$`)
+	allowedGames     = map[string]struct{}{"NLH": {}, "PLO": {}, "PLO5": {}, "MTT": {}, "SnG": {}, "Mixed": {}, "Other": {}}
+	allowedStatus    = map[string]struct{}{"draft": {}, "published": {}, "archived": {}}
+	allowedClubTypes = map[string]struct{}{"cash": {}, "club": {}, "mtt-series": {}, "mafia-and-poker": {}, "underground": {}}
 )
 
 var (
 	validatorOnce sync.Once
 	validatorInst *validator.Validate
 )
+
+// AllowedGames returns the set of canonical game codes.
+func AllowedGames() map[string]struct{} { return allowedGames }
+
+// AllowedClubTypes returns the set of canonical club types.
+func AllowedClubTypes() map[string]struct{} { return allowedClubTypes }
 
 func V() *validator.Validate {
 	validatorOnce.Do(func() {
@@ -35,6 +42,14 @@ func V() *validator.Validate {
 		})
 		_ = v.RegisterValidation("clubstatus", func(fl validator.FieldLevel) bool {
 			_, ok := allowedStatus[fl.Field().String()]
+			return ok
+		})
+		_ = v.RegisterValidation("clubtype", func(fl validator.FieldLevel) bool {
+			s := fl.Field().String()
+			if s == "" {
+				return true
+			}
+			_, ok := allowedClubTypes[s]
 			return ok
 		})
 		v.RegisterTagNameFunc(func(field reflect.StructField) string {
@@ -79,6 +94,8 @@ func messageFor(e validator.FieldError) string {
 		return "must be one of NLH, PLO, PLO5, MTT, SnG, Mixed, Other"
 	case "clubstatus":
 		return "must be one of draft, published, archived"
+	case "clubtype":
+		return "must be one of cash, club, mtt-series, mafia-and-poker, underground"
 	case "min", "max", "gte", "lte", "len":
 		return fmt.Sprintf("must satisfy %s=%s", e.Tag(), e.Param())
 	}

@@ -22,7 +22,9 @@
     "./separator": "./src/components/separator.tsx",
     "./tooltip": "./src/components/tooltip.tsx",
     "./sheet": "./src/components/sheet.tsx",
-    "./skeleton": "./src/components/skeleton.tsx"
+    "./skeleton": "./src/components/skeleton.tsx",
+    "./switch": "./src/components/switch.tsx",
+    "./slider": "./src/components/slider.tsx"
   },
   "files": ["src"],
   "scripts": {

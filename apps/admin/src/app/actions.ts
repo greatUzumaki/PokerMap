@@ -3,6 +3,7 @@
 import { cookies } from "next/headers";
 import { updateTag } from "next/cache";
 import { redirect } from "next/navigation";
+import { safeParseWorkingHours, SocialLinks } from "@pokermap/types";
 import { serverApiUrl } from "@/lib/env";
 
 const SESSION_COOKIE = "pm_session";
@@ -46,23 +47,34 @@ function readPayload(formData: FormData) {
       .map((s) => s.trim())
       .filter(Boolean);
 
+  const rawHours = tryParseJSON(get("workingHours"));
+  const hoursResult = safeParseWorkingHours(rawHours);
+  const rawSocials = tryParseJSON(get("socialLinks"));
+  const socialsResult = SocialLinks.safeParse(rawSocials ?? {});
+
   return {
-    slug: get("slug"),
-    name: get("name"),
-    address: get("address"),
-    lat: getNumber("lat") ?? 0,
-    lng: getNumber("lng") ?? 0,
-    description: get("description"),
-    phones: getList("phones"),
-    website: getOptional("website") ?? null,
-    telegramUrl: getOptional("telegramUrl") ?? null,
-    games: getList("games"),
-    minBuyInCents: getNumber("minBuyInCents") ?? null,
-    maxBuyInCents: getNumber("maxBuyInCents") ?? null,
-    rakeDescription: get("rakeDescription"),
-    photoKeys: getList("photoKeys"),
-    status: getOptional("status") ?? "draft",
-    workingHours: tryParseJSON(get("workingHours")) ?? {},
+    payload: {
+      slug: get("slug"),
+      name: get("name"),
+      address: get("address"),
+      lat: getNumber("lat") ?? 0,
+      lng: getNumber("lng") ?? 0,
+      description: get("description"),
+      phones: getList("phones"),
+      website: getOptional("website") ?? null,
+      telegramUrl: getOptional("telegramUrl") ?? null,
+      games: getList("games"),
+      minBuyInCents: getNumber("minBuyInCents") ?? null,
+      maxBuyInCents: getNumber("maxBuyInCents") ?? null,
+      entryFeeCents: getNumber("entryFeeCents") ?? null,
+      rakeDescription: get("rakeDescription"),
+      photoKeys: getList("photoKeys"),
+      clubType: getOptional("clubType") ?? "cash",
+      socialLinks: socialsResult.success ? socialsResult.data : {},
+      status: getOptional("status") ?? "draft",
+      workingHours: hoursResult.ok ? hoursResult.value : rawHours ?? {},
+    },
+    hoursError: hoursResult.ok ? undefined : hoursResult.error,
   };
 }
 
@@ -85,7 +97,10 @@ function liftError(body: unknown): ActionState {
 }
 
 export async function createClub(_: ActionState | undefined, formData: FormData): Promise<ActionState> {
-  const payload = readPayload(formData);
+  const { payload, hoursError } = readPayload(formData);
+  if (hoursError) {
+    return { ok: false, code: "invalid_working_hours", message: "Проверьте часы работы", fields: { workingHours: hoursError } };
+  }
   const res = await authedFetch("/v1/admin/clubs", { method: "POST", body: JSON.stringify(payload) });
   if (!res.ok) return liftError(await res.json().catch(() => ({})));
   const created = (await res.json()) as { id: string };
@@ -94,7 +109,10 @@ export async function createClub(_: ActionState | undefined, formData: FormData)
 }
 
 export async function updateClub(id: string, _: ActionState | undefined, formData: FormData): Promise<ActionState> {
-  const payload = readPayload(formData);
+  const { payload, hoursError } = readPayload(formData);
+  if (hoursError) {
+    return { ok: false, code: "invalid_working_hours", message: "Проверьте часы работы", fields: { workingHours: hoursError } };
+  }
   const res = await authedFetch(`/v1/admin/clubs/${id}`, { method: "PUT", body: JSON.stringify(payload) });
   if (!res.ok) return liftError(await res.json().catch(() => ({})));
   updateTag("clubs");
