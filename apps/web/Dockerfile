@@ -44,6 +44,8 @@ ENV BASE_PATH=$BASE_PATH \
     NEXT_PUBLIC_SUPPORT_TG=$NEXT_PUBLIC_SUPPORT_TG \
     MINIO_PUBLIC_URL=$MINIO_PUBLIC_URL
 
+RUN pnpm --filter @pokermap/types run types:gen
+
 WORKDIR /repo/apps/web
 RUN pnpm run build
 
