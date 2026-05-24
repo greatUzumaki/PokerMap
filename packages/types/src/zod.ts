@@ -21,7 +21,8 @@ export type WorkingHoursSlot = z.infer<typeof WorkingHoursSlot>;
 export const WorkingDay = z
   .object({
     closed: z.boolean().default(false),
-    slots: z.array(WorkingHoursSlot).max(4),
+    // Tolerate `null` for empty slot arrays — Go marshals nil slices as JSON null.
+    slots: z.preprocess((v) => v ?? [], z.array(WorkingHoursSlot).max(4)),
   })
   .refine((d) => !d.closed || d.slots.length === 0, {
     message: "closed days cannot have slots",
