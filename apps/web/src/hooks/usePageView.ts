@@ -4,7 +4,6 @@ import { useEffect, useRef } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { track } from "@/lib/track";
 
-/** Emits a `web.page_view` event on every pathname change. */
 export function usePageView() {
   const pathname = usePathname();
   const searchParams = useSearchParams();

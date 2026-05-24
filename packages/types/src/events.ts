@@ -1,23 +1,15 @@
 import { z } from "zod";
 
-/**
- * Whitelist of event kinds accepted by `POST /v1/events` and emitted from
- * the bot, Mini App auth handler, and admin mutations. Keep in sync with
- * `apps/api/internal/events/kind.go`.
- */
+// Keep in sync with apps/api/internal/events/kind.go.
 export const EVENT_KINDS = [
-  // Bot
   "bot.start",
-  // Mini App lifecycle (server-emitted)
   "app.open",
-  // Public web (client-emitted via POST /v1/events)
   "web.page_view",
   "web.filter_apply",
   "web.filter_reset",
   "web.club_view",
   "web.openinmaps_click",
   "web.share_click",
-  // Admin mutations (server-emitted by events.Record from handler code)
   "admin.club.create",
   "admin.club.update",
   "admin.club.publish",
@@ -33,7 +25,7 @@ export function isEventKind(s: unknown): s is EventKind {
   return typeof s === "string" && (EVENT_KINDS as readonly string[]).includes(s);
 }
 
-/** Public/web kinds — what `POST /v1/events` accepts. */
+// Subset accepted by POST /v1/events.
 export const PUBLIC_EVENT_KINDS: readonly EventKind[] = EVENT_KINDS.filter(
   (k) => k.startsWith("web."),
 );
@@ -42,7 +34,6 @@ export const PublicEventKindSchema = z.enum(
   PUBLIC_EVENT_KINDS as unknown as [EventKind, ...EventKind[]],
 );
 
-/** Single event submitted by the browser. */
 export const ClientEventSchema = z.object({
   kind: PublicEventKindSchema,
   payload: z.record(z.unknown()).optional(),
@@ -55,26 +46,21 @@ export const ClientEventsBatchSchema = z.object({
 });
 export type ClientEventsBatch = z.infer<typeof ClientEventsBatchSchema>;
 
-/** What the admin Analytics page receives per row. */
 export const UserEventRecordSchema = z.object({
-  id: z.string(),
+  // API serializes id as int64; coerce to string for stable React keys.
+  id: z.union([z.string(), z.number()]).transform((v) => String(v)),
   occurredAt: z.string(),
   telegramUserId: z.number().int().nullable(),
   sessionId: z.string().nullable(),
   kind: EventKindSchema,
   entityType: z.string().nullable(),
   entityId: z.string().nullable(),
-  payload: z.record(z.unknown()),
+  payload: z.record(z.unknown()).default({}).nullable().transform((v) => v ?? {}),
   requestIp: z.string().nullable(),
   userAgent: z.string().nullable(),
-  actor: z
-    .object({
-      telegramUserId: z.number(),
-      firstName: z.string(),
-      lastName: z.string(),
-      username: z.string().nullable(),
-    })
-    .nullable(),
+  actorFirstName: z.string().nullable().optional(),
+  actorLastName: z.string().nullable().optional(),
+  actorUsername: z.string().nullable().optional(),
 });
 export type UserEventRecord = z.infer<typeof UserEventRecordSchema>;
 
@@ -84,7 +70,6 @@ export const UserEventsListSchema = z.object({
 });
 export type UserEventsList = z.infer<typeof UserEventsListSchema>;
 
-/** Telegram user profile as we persist it. */
 export const UserProfileSchema = z.object({
   telegramUserId: z.number().int(),
   firstName: z.string(),

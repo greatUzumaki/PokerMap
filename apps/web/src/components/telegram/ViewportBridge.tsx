@@ -1,10 +1,16 @@
 "use client";
 
 import { useEffect } from "react";
-import { expandViewport, useSignal, viewportStableHeight } from "@telegram-apps/sdk-react";
+import {
+  expandViewport,
+  isFullscreen,
+  useSignal,
+  viewportStableHeight,
+} from "@telegram-apps/sdk-react";
 
 export function ViewportBridge() {
   const height = useSignal(viewportStableHeight);
+  const fullscreen = useSignal(isFullscreen);
 
   useEffect(() => {
     try {
@@ -21,6 +27,15 @@ export function ViewportBridge() {
       delete document.documentElement.dataset.tma;
     };
   }, []);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    if (fullscreen) {
+      document.documentElement.dataset.tmaFullscreen = "true";
+    } else {
+      delete document.documentElement.dataset.tmaFullscreen;
+    }
+  }, [fullscreen]);
 
   useEffect(() => {
     if (typeof document === "undefined") return;

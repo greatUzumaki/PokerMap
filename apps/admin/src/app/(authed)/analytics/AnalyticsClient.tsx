@@ -205,11 +205,9 @@ export function AnalyticsClient({ initial, kinds, filters }: Props) {
             {items.map((ev) => {
               const fam = kindFamily(ev.kind);
               const open = expanded === ev.id;
-              const actorName = ev.actor
-                ? `${ev.actor.firstName} ${ev.actor.lastName}`.trim()
-                : ev.telegramUserId
-                  ? `tg:${ev.telegramUserId}`
-                  : "anon";
+              const fullName = `${ev.actorFirstName ?? ""} ${ev.actorLastName ?? ""}`.trim();
+              const actorName =
+                fullName || (ev.telegramUserId ? `tg:${ev.telegramUserId}` : "anon");
               return (
                 <li key={ev.id} className="rounded-md border">
                   <button
@@ -221,8 +219,8 @@ export function AnalyticsClient({ initial, kinds, filters }: Props) {
                     <div className="flex-1">
                       <div className="text-sm">
                         <span className="font-medium">{actorName}</span>
-                        {ev.actor?.username ? (
-                          <span className="ml-1 text-muted-foreground">@{ev.actor.username}</span>
+                        {ev.actorUsername ? (
+                          <span className="ml-1 text-muted-foreground">@{ev.actorUsername}</span>
                         ) : null}
                       </div>
                       <div className="text-xs text-muted-foreground">

@@ -13,11 +13,14 @@ const EMPTY_BANNER_TIMEOUT_MS = 3000;
 export function MapStage() {
   const pathname = usePathname();
   const isMapRoute = pathname === "/";
-  const { data, isLoading, error } = useClubs();
-  const { predicate } = useClubFilters();
+  const { data, error } = useClubs();
+  const { predicate, activeCount } = useClubFilters();
+  const totalLoaded = data?.items?.length ?? 0;
   const clubs = (data?.items ?? []).filter(predicate);
 
-  const showEmptyCandidate = isMapRoute && clubs.length === 0 && !isLoading && !error;
+  // Suppress on first load and when no filters are active so the banner cannot flash.
+  const showEmptyCandidate =
+    isMapRoute && !error && totalLoaded > 0 && clubs.length === 0 && activeCount > 0;
   const [showEmpty, setShowEmpty] = useState(false);
 
   useEffect(() => {
@@ -28,7 +31,7 @@ export function MapStage() {
     setShowEmpty(true);
     const t = setTimeout(() => setShowEmpty(false), EMPTY_BANNER_TIMEOUT_MS);
     return () => clearTimeout(t);
-  }, [showEmptyCandidate, clubs.length, predicate]);
+  }, [showEmptyCandidate, clubs.length, activeCount]);
 
   return (
     <div

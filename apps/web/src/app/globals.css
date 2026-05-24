@@ -15,7 +15,7 @@
     --tg-page-pt-md: 3rem;
   }
 
-  html[data-tma="true"] {
+  html[data-tma-fullscreen="true"] {
     --tg-inset-top: 3.75rem;
     --tg-page-pt: 4rem;
     --tg-page-pt-md: 5rem;

@@ -43,7 +43,7 @@ type batchRequest struct {
 	Events []clientEvent `json:"events"`
 }
 
-// Ingest is POST /v1/events — public, rate-limited, anonymous-friendly.
+// Ingest is POST /v1/events.
 func (h *Handler) Ingest(w http.ResponseWriter, r *http.Request) {
 	if r.ContentLength > int64(maxPayloadBytes*maxBatch+1024) {
 		httpx.Error(w, r, http.StatusRequestEntityTooLarge, "too_large", "batch too large")
@@ -59,7 +59,7 @@ func (h *Handler) Ingest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate kinds + payload sizes up front so we reject the whole batch atomically.
+	// Reject the whole batch on any invalid event so partial inserts cannot happen.
 	for i, ev := range body.Events {
 		if !IsPublic(ev.Kind) {
 			httpx.Error(w, r, http.StatusBadRequest, "invalid_kind", "unknown kind: "+ev.Kind)
@@ -71,7 +71,6 @@ func (h *Handler) Ingest(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Identify actor: session_id from cookie auth → telegram_user_id; else anon header.
 	var tgID int64
 	var sessionID string
 	if u, ok := auth.FromContext(r.Context()); ok && u.TelegramUserID > 0 {
@@ -80,11 +79,10 @@ func (h *Handler) Ingest(w http.ResponseWriter, r *http.Request) {
 		sessionID = strings.TrimSpace(r.Header.Get("X-Anon-Session"))
 	}
 	if tgID == 0 && sessionID == "" {
-		// Tolerate missing identity — bucket all such requests by IP for rate limiting.
+		// Bucket anonymous traffic by IP so the rate limiter still has a key.
 		sessionID = "ip:" + clientIP(r)
 	}
 
-	// Rate limit per (actor, kind).
 	if h.RDB != nil {
 		for _, ev := range body.Events {
 			actor := strconv.FormatInt(tgID, 10)
@@ -120,7 +118,7 @@ func (h *Handler) Ingest(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// rateLimit enforces sliding-window: 20 / 10s AND 200 / 60s per (actor, kind).
+// rateLimit: 20 events / 10s AND 200 / 60s per (actor, kind).
 func (h *Handler) rateLimit(ctx context.Context, actor, kind string) error {
 	now := time.Now().UnixMilli()
 	ctx, cancel := context.WithTimeout(ctx, 200*time.Millisecond)
@@ -134,7 +132,7 @@ func (h *Handler) rateLimit(ctx context.Context, actor, kind string) error {
 		cardCmd := pipe.ZCard(ctx, key)
 		pipe.Expire(ctx, key, time.Duration(windowMs)*time.Millisecond)
 		if _, err := pipe.Exec(ctx); err != nil {
-			return nil // graceful: fail-open on redis hiccup
+			return nil // fail-open: a redis hiccup must not break user traffic
 		}
 		if cardCmd.Val() > limit {
 			return errors.New("rate_limited")
@@ -146,8 +144,6 @@ func (h *Handler) rateLimit(ctx context.Context, actor, kind string) error {
 	}
 	return check(60_000, rateWindowMinute, "60s")
 }
-
-// ===== Admin endpoints =====================================================
 
 func (h *Handler) AdminList(w http.ResponseWriter, r *http.Request) {
 	f, err := parseFilters(r)
@@ -274,5 +270,4 @@ func nilIfEmpty(s string) any {
 	return s
 }
 
-// Ensure uuid import is referenced when other helpers expand later.
-var _ = uuid.Nil
+var _ = uuid.Nil // import retained for forthcoming entity_id helpers

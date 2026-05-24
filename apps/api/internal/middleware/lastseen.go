@@ -14,10 +14,8 @@ type lastSeenStore interface {
 	MarkSeen(ctx context.Context, telegramUserID int64) error
 }
 
-// LastSeen returns a middleware that bumps users.last_seen_at for the
-// authenticated request's user, coalesced to at most once per 60 seconds per
-// user via Redis. If Redis is nil or unreachable, the middleware silently
-// skips the write to avoid blocking traffic.
+// LastSeen bumps users.last_seen_at at most once per 60s per user via Redis.
+// Skips silently when Redis is nil or errors, so request traffic is never blocked.
 func LastSeen(rdb *redis.Client, store lastSeenStore, logger *slog.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -38,7 +36,7 @@ func LastSeen(rdb *redis.Client, store lastSeenStore, logger *slog.Logger) func(
 					return
 				}
 				if !ok {
-					return // recently updated
+					return
 				}
 			}
 			ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)

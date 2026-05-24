@@ -1,7 +1,6 @@
 package events
 
-// Kind is the discriminator stored in user_events.kind. Must stay in sync
-// with packages/types/src/events.ts.
+// Kind must stay in sync with packages/types/src/events.ts.
 type Kind string
 
 const (
@@ -20,7 +19,6 @@ const (
 	KindAdminClubDelete    Kind = "admin.club.delete"
 )
 
-// AllKinds is the full whitelist used by the admin endpoint to validate filters.
 var AllKinds = []Kind{
 	KindBotStart, KindAppOpen,
 	KindWebPageView, KindWebFilterApply, KindWebFilterReset, KindWebClubView,
@@ -28,7 +26,7 @@ var AllKinds = []Kind{
 	KindAdminClubCreate, KindAdminClubUpdate, KindAdminClubPublish, KindAdminClubArchive, KindAdminClubDelete,
 }
 
-// PublicKinds is the subset accepted from the browser via POST /v1/events.
+// PublicKinds: subset accepted from POST /v1/events.
 var PublicKinds = []Kind{
 	KindWebPageView, KindWebFilterApply, KindWebFilterReset, KindWebClubView,
 	KindWebOpenInMapsClick, KindWebShareClick,

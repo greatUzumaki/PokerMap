@@ -6,9 +6,7 @@ import (
 	"time"
 )
 
-// RunRetentionLoop blocks until ctx is cancelled, running Prune once every
-// 24 hours. The first run is offset by initialDelay so api boot is fast.
-// retentionDays must be > 0; caller validates.
+// RunRetentionLoop blocks until ctx is cancelled. retentionDays must be > 0.
 func RunRetentionLoop(ctx context.Context, store *Store, retentionDays int, initialDelay time.Duration, logger *slog.Logger) {
 	if retentionDays <= 0 {
 		logger.Error("events retention loop refusing to start", "retentionDays", retentionDays)

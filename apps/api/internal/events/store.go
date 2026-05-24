@@ -27,19 +27,20 @@ type Event struct {
 	Payload        json.RawMessage `json:"payload"`
 	RequestIP      *string         `json:"requestIp"`
 	UserAgent      *string         `json:"userAgent"`
-	// Joined actor profile (best-effort).
-	ActorFirstName *string `json:"actorFirstName,omitempty"`
+	ActorFirstName *string         `json:"actorFirstName,omitempty"`
 	ActorLastName  *string `json:"actorLastName,omitempty"`
 	ActorUsername  *string `json:"actorUsername,omitempty"`
 }
 
+// RecordInput: zero-valued TelegramUserID, SessionID, EntityType,
+// EntityID, RequestIP, and UserAgent become SQL NULL. nil Payload → '{}'.
 type RecordInput struct {
 	Kind           Kind
-	TelegramUserID int64 // 0 → NULL
+	TelegramUserID int64
 	SessionID      string
 	EntityType     string
-	EntityID       uuid.UUID // zero → NULL
-	Payload        any       // JSON-marshalable; nil → '{}'
+	EntityID       uuid.UUID
+	Payload        any
 	RequestIP      string
 	UserAgent      string
 }
@@ -268,7 +269,6 @@ func (s *Store) BulkDelete(ctx context.Context, f ListFilters) (int64, error) {
 	return ct.RowsAffected(), nil
 }
 
-// Prune removes rows older than olderThan in batches of batchSize. Returns total deleted.
 func (s *Store) Prune(ctx context.Context, olderThan time.Time, batchSize int) (int64, error) {
 	if batchSize <= 0 {
 		batchSize = 10_000

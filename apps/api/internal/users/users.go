@@ -1,6 +1,4 @@
-// Package users persists the Telegram identities that have interacted with PokerMap.
-// One row per telegram_user_id; profile is refreshed on every visit but first_seen
-// is sticky.
+// Package users persists Telegram identities. first_seen_at is sticky.
 package users
 
 import (
@@ -38,9 +36,6 @@ func New(pool *pgxpool.Pool) *Store {
 	return &Store{pool: pool}
 }
 
-// Upsert inserts or refreshes a user row. first_seen_at is preserved on conflict;
-// every other field is overwritten with the supplied (possibly empty) values.
-// Pass nil for unknown nullable fields.
 type UpsertInput struct {
 	TelegramUserID  int64
 	FirstName       string
@@ -77,8 +72,7 @@ func (s *Store) Upsert(ctx context.Context, in UpsertInput) error {
 	return err
 }
 
-// EnsureExists makes sure a users row exists for the given id, with empty profile
-// fields. Used by admin seeding from env where we don't yet know the profile.
+// EnsureExists is used by admin seeding before the profile is known.
 func (s *Store) EnsureExists(ctx context.Context, telegramUserID int64) error {
 	_, err := s.pool.Exec(ctx, `
 		INSERT INTO users (telegram_user_id) VALUES ($1)
@@ -135,8 +129,7 @@ func (s *Store) List(ctx context.Context, p ListParams) ([]Profile, error) {
 	return out, rows.Err()
 }
 
-// MarkSeen bumps last_seen_at unconditionally. Caller should rate-limit this
-// (typically once per minute per user via Redis).
+// MarkSeen is rate-limited by the LastSeen middleware via Redis, not here.
 func (s *Store) MarkSeen(ctx context.Context, telegramUserID int64) error {
 	_, err := s.pool.Exec(ctx,
 		`UPDATE users SET last_seen_at = now() WHERE telegram_user_id = $1`,
@@ -145,7 +138,6 @@ func (s *Store) MarkSeen(ctx context.Context, telegramUserID int64) error {
 	return err
 }
 
-// MarkAction bumps last_action_at AND last_seen_at; called by events.Record.
 func (s *Store) MarkAction(ctx context.Context, telegramUserID int64) error {
 	if telegramUserID <= 0 {
 		return nil

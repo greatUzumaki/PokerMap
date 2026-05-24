@@ -1,5 +1,4 @@
-// Package bot is a tiny Telegram Bot API webhook handler. Only /start is wired
-// today; future commands plug into Handler.handleMessage.
+// Package bot handles incoming Telegram bot updates via webhook.
 package bot
 
 import (
@@ -70,7 +69,6 @@ func NewHandler(token, secret, miniAppURL string, u *users.Store, e *events.Stor
 	}
 }
 
-// ServeHTTP handles POST /v1/tg/webhook.
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if h.BotToken == "" || strings.Contains(h.BotToken, "REPLACE_ME") {
 		http.Error(w, "bot disabled", http.StatusServiceUnavailable)
@@ -110,7 +108,7 @@ func (h *Handler) handleMessage(ctx context.Context, upd Update) error {
 		return nil
 	}
 
-	// Upsert the user no matter the command — we want everyone who messages us.
+	// Upsert every sender, not just /start, so user-tracking captures every interaction.
 	usernamePtr := stringPtrOrNil(m.From.Username)
 	languagePtr := stringPtrOrNil(m.From.LanguageCode)
 	if err := h.Users.Upsert(ctx, users.UpsertInput{
@@ -130,7 +128,6 @@ func (h *Handler) handleMessage(ctx context.Context, upd Update) error {
 	if !strings.HasPrefix(text, "/start") {
 		return nil
 	}
-	// /start may carry a deep-link parameter: "/start poker_promo"
 	startParam := strings.TrimSpace(strings.TrimPrefix(text, "/start"))
 
 	if err := h.Events.Record(ctx, events.RecordInput{
@@ -192,8 +189,7 @@ func (h *Handler) callAPI(ctx context.Context, method string, body any) error {
 	return nil
 }
 
-// EnsureWebhook configures Telegram to deliver updates to webhookURL, idempotently.
-// Returns nil if the registered URL already matches.
+// EnsureWebhook is idempotent: no-op when Telegram already has webhookURL registered.
 func EnsureWebhook(ctx context.Context, botToken, webhookURL, secret string, logger *slog.Logger) error {
 	if botToken == "" || strings.Contains(botToken, "REPLACE_ME") || webhookURL == "" {
 		logger.Info("bot webhook not configured (missing token or url) — skipping")
@@ -201,7 +197,6 @@ func EnsureWebhook(ctx context.Context, botToken, webhookURL, secret string, log
 	}
 	client := &http.Client{Timeout: 5 * time.Second}
 
-	// getWebhookInfo
 	info, err := callGet(ctx, client, botToken, "getWebhookInfo")
 	if err != nil {
 		return fmt.Errorf("getWebhookInfo: %w", err)
@@ -219,7 +214,6 @@ func EnsureWebhook(ctx context.Context, botToken, webhookURL, secret string, log
 		return nil
 	}
 
-	// setWebhook
 	logger.Info("bot webhook updating", "old", infoBody.Result.URL, "new", webhookURL)
 	body := map[string]any{
 		"url":                  webhookURL,

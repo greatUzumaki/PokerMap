@@ -56,12 +56,9 @@ async function flush() {
       body: JSON.stringify({ events: batch }),
       keepalive: true,
     });
-    if (res.status >= 400 && res.status < 500) {
-      // 4xx — bad event, drop silently (server validated)
-      return;
-    }
+    if (res.status >= 400 && res.status < 500) return;
     if (!res.ok) {
-      // Re-queue 5xx events at the head, capped at BATCH_LIMIT to avoid runaway growth.
+      // Re-queue server errors capped at 2× batch to avoid runaway growth.
       queue = [...batch, ...queue].slice(0, BATCH_LIMIT * 2);
     }
   } catch {
@@ -81,7 +78,6 @@ function scheduleFlush() {
   }, FLUSH_DELAY_MS);
 }
 
-/** Fire-and-forget. Batches and flushes either at BATCH_LIMIT events or after 2s. */
 export function track(kind: EventKind, payload?: Record<string, unknown>): void {
   if (typeof window === "undefined") return;
   queue.push({ kind, payload, occurredAt: new Date().toISOString() });
@@ -92,7 +88,7 @@ export function track(kind: EventKind, payload?: Record<string, unknown>): void 
   }
 }
 
-/** Flush any pending events. Called on page unload via pagehide listener. */
 if (typeof window !== "undefined") {
+  // Drain the queue before the tab is hidden so closing the page does not lose events.
   window.addEventListener("pagehide", () => void flush(), { capture: true });
 }
