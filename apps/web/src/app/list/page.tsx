@@ -1,5 +1,4 @@
 import { listPublishedClubs } from "@/lib/api/server";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@pokermap/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@pokermap/ui/tabs";
 import { ListClient } from "./ListClient";
 
@@ -18,33 +17,37 @@ export default async function ListPage() {
   const tournaments = items.filter((c) => c.games.some((g) => /турнир|tournament|mtt/i.test(g)));
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 py-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Покер-клубы Петербурга</CardTitle>
-          <CardDescription>
-            {items.length} {pluralize(items.length, ["клуб", "клуба", "клубов"])} на карте
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="all" className="w-full">
-            <TabsList className="mb-4 grid w-full grid-cols-3">
-              <TabsTrigger value="all">Все</TabsTrigger>
-              <TabsTrigger value="cash">Кэш</TabsTrigger>
-              <TabsTrigger value="mtt">Турниры</TabsTrigger>
-            </TabsList>
-            <TabsContent value="all">
-              <ListClient clubs={items} />
-            </TabsContent>
-            <TabsContent value="cash">
-              <ListClient clubs={cash} />
-            </TabsContent>
-            <TabsContent value="mtt">
-              <ListClient clubs={tournaments} />
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+    <div className="min-h-app bg-background">
+      <div className="mx-auto w-full max-w-2xl px-4 pb-32 pt-8 md:pt-12">
+        <header className="mb-6 flex items-baseline justify-between">
+          <h1 className="text-2xl font-semibold tracking-tight">Клубы</h1>
+          <span className="text-sm tabular-nums text-muted-foreground">
+            {items.length} {pluralize(items.length, ["клуб", "клуба", "клубов"])}
+          </span>
+        </header>
+        <Tabs defaultValue="all" className="w-full">
+          <TabsList className="mb-6 grid w-full grid-cols-3 rounded-full bg-muted/60 p-1">
+            <TabsTrigger value="all" className="rounded-full">
+              Все
+            </TabsTrigger>
+            <TabsTrigger value="cash" className="rounded-full">
+              Кэш
+            </TabsTrigger>
+            <TabsTrigger value="mtt" className="rounded-full">
+              Турниры
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="all">
+            <ListClient clubs={items} />
+          </TabsContent>
+          <TabsContent value="cash">
+            <ListClient clubs={cash} />
+          </TabsContent>
+          <TabsContent value="mtt">
+            <ListClient clubs={tournaments} />
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 }

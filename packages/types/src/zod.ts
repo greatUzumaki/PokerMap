@@ -51,8 +51,8 @@ export const Club = z.object({
   rakeDescription: z.string().max(500).default(""),
   photoKeys: z.array(z.string()).default([]),
   status: ClubStatus,
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
+  createdAt: z.string().datetime({ offset: true }),
+  updatedAt: z.string().datetime({ offset: true }),
 });
 export type Club = z.infer<typeof Club>;
 
@@ -97,7 +97,7 @@ export type UploadSignRequest = z.infer<typeof UploadSignRequest>;
 export const UploadSignResponse = z.object({
   url: z.string().url(),
   key: z.string(),
-  expiresAt: z.string().datetime(),
+  expiresAt: z.string().datetime({ offset: true }),
 });
 export type UploadSignResponse = z.infer<typeof UploadSignResponse>;
 

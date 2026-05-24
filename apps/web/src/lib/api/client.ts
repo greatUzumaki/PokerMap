@@ -1,5 +1,6 @@
 "use client";
 
+import { ClubsList, type ClubsList as ClubsListT } from "@pokermap/types";
 import { publicEnv } from "@/lib/env";
 
 export class ApiError extends Error {
@@ -52,5 +53,15 @@ export const api = {
       body: JSON.stringify(payload),
     });
     return parseJsonOrThrow<{ url: string; key: string; expiresAt: string }>(res);
+  },
+  async listPublishedClubs(opts: { limit?: number; bbox?: string } = {}): Promise<ClubsListT> {
+    const qs = new URLSearchParams();
+    if (opts.limit) qs.set("limit", String(opts.limit));
+    if (opts.bbox) qs.set("bbox", opts.bbox);
+    const res = await fetch(`${publicEnv.NEXT_PUBLIC_API_URL}/v1/clubs?${qs}`, {
+      credentials: "include",
+    });
+    const data = await parseJsonOrThrow<unknown>(res);
+    return ClubsList.parse(data);
   },
 };

@@ -1,16 +1,18 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Montserrat } from "next/font/google";
 import { Toaster } from "sonner";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import { TelegramProvider } from "@/components/telegram/TelegramProvider";
 import { BottomNav } from "@/components/nav/BottomNav";
+import { MapStage } from "@/components/map/MapStage";
 import { publicEnv } from "@/lib/env";
 import "./globals.css";
 
-const inter = Inter({
+const montserrat = Montserrat({
   subsets: ["latin", "cyrillic"],
   variable: "--font-sans",
   display: "swap",
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -32,11 +34,12 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ru" suppressHydrationWarning className={`${inter.variable} dark`}>
+    <html lang="ru" suppressHydrationWarning className={`${montserrat.variable} dark`}>
       <body className="bg-background text-foreground font-sans">
         <QueryProvider>
           <TelegramProvider>
-            <main className="flex min-h-app flex-col">{children}</main>
+            <MapStage />
+            <main className="relative z-10 flex min-h-app flex-col">{children}</main>
             <BottomNav />
           </TelegramProvider>
         </QueryProvider>
