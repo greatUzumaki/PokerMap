@@ -14,7 +14,6 @@ const nextConfig: NextConfig = {
   basePath,
   assetPrefix: basePath || undefined,
   transpilePackages: ["@pokermap/ui", "@pokermap/types"],
-  typedRoutes: true,
   turbopack: {
     root: path.join(import.meta.dirname, "..", ".."),
   },

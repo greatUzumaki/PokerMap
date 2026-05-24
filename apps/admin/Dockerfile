@@ -52,7 +52,6 @@ ENV NODE_ENV=production \
 
 COPY --from=builder --chown=app:app /repo/apps/admin/.next/standalone ./
 COPY --from=builder --chown=app:app /repo/apps/admin/.next/static ./apps/admin/.next/static
-COPY --from=builder --chown=app:app /repo/apps/admin/public ./apps/admin/public
 
 ARG BASE_PATH=""
 ENV BASE_PATH=$BASE_PATH

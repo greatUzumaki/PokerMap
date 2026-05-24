@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import type { Route } from "next";
 import { useMemo, useState } from "react";
 import type { Club } from "@pokermap/types";
 import { Input } from "@pokermap/ui/input";
@@ -55,7 +54,7 @@ function ClubCard({ club }: { club: Club }) {
   return (
     <li className="relative">
       <Link
-        href={`/clubs/${club.slug}` as Route}
+        href={`/clubs/${club.slug}`}
         prefetch={false}
         className="block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       >

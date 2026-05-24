@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import type { Route } from "next";
 import type { Club, WorkingHours } from "@pokermap/types";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
 import { Badge } from "@pokermap/ui/badge";
@@ -31,7 +30,7 @@ function formatBuyIn(min: number | null | undefined, max: number | null | undefi
 
 function todayKey(): keyof WorkingHours {
   const idx = new Date().getDay();
-  return DAYS[idx] as keyof WorkingHours;
+  return DAYS[idx]!;
 }
 
 export function ClubSheet({
@@ -145,7 +144,7 @@ export function ClubSheet({
 
         <DrawerFooter className="gap-2">
           <Button asChild size="lg" className="w-full">
-            <Link href={`/clubs/${club.slug}` as Route} prefetch={false}>
+            <Link href={`/clubs/${club.slug}`} prefetch={false}>
               <ExternalLink className="h-4 w-4" aria-hidden /> Подробнее
             </Link>
           </Button>

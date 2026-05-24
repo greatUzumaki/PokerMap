@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { Montserrat } from "next/font/google";
 import { Toaster } from "sonner";
 import { QueryProvider } from "@/components/providers/QueryProvider";
@@ -38,7 +39,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="bg-background text-foreground font-sans">
         <QueryProvider>
           <TelegramProvider>
-            <MapStage />
+            <Suspense fallback={null}>
+              <MapStage />
+            </Suspense>
             <main className="relative z-10 flex min-h-app flex-col">{children}</main>
             <BottomNav />
           </TelegramProvider>

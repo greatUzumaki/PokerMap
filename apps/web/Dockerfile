@@ -61,7 +61,6 @@ ENV NODE_ENV=production \
 # Standalone output bundles a minimal node_modules + server.js
 COPY --from=builder --chown=app:app /repo/apps/web/.next/standalone ./
 COPY --from=builder --chown=app:app /repo/apps/web/.next/static ./apps/web/.next/static
-COPY --from=builder --chown=app:app /repo/apps/web/public ./apps/web/public
 
 # BASE_PATH is read by the runner for healthcheck only (the path is already baked in by Next.js).
 ARG BASE_PATH=""
