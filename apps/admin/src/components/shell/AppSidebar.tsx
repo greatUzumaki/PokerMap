@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Building2, Image as ImageIcon, LayoutDashboard, ScrollText, Settings } from "lucide-react";
+import { Building2, Image as ImageIcon, LayoutDashboard, LineChart, Settings, Users as UsersIcon } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -26,7 +26,8 @@ const NAV: NavItem[] = [
   { label: "Дашборд", href: "/", icon: LayoutDashboard },
   { label: "Клубы", href: "/clubs", icon: Building2 },
   { label: "Медиа", href: "/media", icon: ImageIcon },
-  { label: "Аудит", href: "/audit", icon: ScrollText },
+  { label: "Пользователи", href: "/users", icon: UsersIcon },
+  { label: "Аналитика", href: "/analytics", icon: LineChart },
   { label: "Настройки", href: "/settings", icon: Settings },
 ];
 

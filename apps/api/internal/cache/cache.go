@@ -21,6 +21,9 @@ type Cache interface {
 	Ping(ctx context.Context) error
 	Enabled() bool
 	Close() error
+	// Raw exposes the underlying redis client for callers that need direct
+	// access (rate limiters, distributed locks). Returns nil for the no-op cache.
+	Raw() *redis.Client
 }
 
 type redisCache struct {
@@ -128,9 +131,12 @@ func (c *redisCache) Close() error {
 	return c.rdb.Close()
 }
 
+func (c *redisCache) Raw() *redis.Client { return c.rdb }
+
 func (noopCache) Get(context.Context, string, any) (bool, error)              { return false, nil }
 func (noopCache) Set(context.Context, string, any, time.Duration) error        { return nil }
 func (noopCache) Invalidate(context.Context, ...string) error                  { return nil }
 func (noopCache) Ping(context.Context) error                                   { return nil }
 func (noopCache) Enabled() bool                                                { return false }
 func (noopCache) Close() error                                                 { return nil }
+func (noopCache) Raw() *redis.Client                                            { return nil }

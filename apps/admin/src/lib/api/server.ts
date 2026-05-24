@@ -1,6 +1,14 @@
 import "server-only";
 import { cookies } from "next/headers";
-import { Club } from "@pokermap/types";
+import {
+  Club,
+  type UserEventsList,
+  UserEventsListSchema,
+  type UsersList,
+  UsersListSchema,
+  type UserProfile,
+  UserProfileSchema,
+} from "@pokermap/types";
 import { serverApiUrl } from "@/lib/env";
 
 const SESSION_COOKIE = "pm_session";
@@ -67,4 +75,45 @@ export async function getAdminOverview(): Promise<AdminOverview> {
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
     .slice(0, 5);
   return { totals, recent };
+}
+
+// ===== Analytics + Users =====================================================
+
+export interface ListEventsParams {
+  from?: string | undefined;
+  to?: string | undefined;
+  kinds?: string[] | undefined;
+  telegramUserId?: number | undefined;
+  q?: string | undefined;
+  cursor?: string | undefined;
+  limit?: number | undefined;
+}
+
+export async function listEvents(params: ListEventsParams): Promise<UserEventsList> {
+  const qs = new URLSearchParams();
+  if (params.from) qs.set("from", params.from);
+  if (params.to) qs.set("to", params.to);
+  for (const k of params.kinds ?? []) qs.append("kind", k);
+  if (params.telegramUserId) qs.set("telegramUserId", String(params.telegramUserId));
+  if (params.q) qs.set("q", params.q);
+  if (params.cursor) qs.set("cursor", params.cursor);
+  if (params.limit) qs.set("limit", String(params.limit));
+  const res = await authedFetch(`/v1/admin/events?${qs}`);
+  if (!res.ok) throw new Error(`api admin events ${res.status}`);
+  return UserEventsListSchema.parse(await res.json());
+}
+
+export async function listUsers(q?: string): Promise<UsersList> {
+  const qs = new URLSearchParams();
+  if (q) qs.set("q", q);
+  const res = await authedFetch(`/v1/admin/users?${qs}`);
+  if (!res.ok) throw new Error(`api admin users ${res.status}`);
+  return UsersListSchema.parse(await res.json());
+}
+
+export async function getUser(telegramUserId: number): Promise<UserProfile | null> {
+  const res = await authedFetch(`/v1/admin/users/${telegramUserId}`);
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`api admin user ${res.status}`);
+  return UserProfileSchema.parse(await res.json());
 }

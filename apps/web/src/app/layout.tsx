@@ -6,6 +6,7 @@ import { QueryProvider } from "@/components/providers/QueryProvider";
 import { TelegramProvider } from "@/components/telegram/TelegramProvider";
 import { BottomNav } from "@/components/nav/BottomNav";
 import { MapStage } from "@/components/map/MapStage";
+import { PageViewTracker } from "@/components/track/PageViewTracker";
 import { publicEnv } from "@/lib/env";
 import "./globals.css";
 
@@ -42,11 +43,23 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Suspense fallback={null}>
               <MapStage />
             </Suspense>
+            <Suspense fallback={null}>
+              <PageViewTracker />
+            </Suspense>
             <main className="relative z-10 flex min-h-app flex-col">{children}</main>
             <BottomNav />
           </TelegramProvider>
         </QueryProvider>
-        <Toaster position="top-center" theme="dark" richColors duration={3000} closeButton />
+        <Toaster
+          position="top-center"
+          theme="dark"
+          richColors
+          closeButton
+          expand
+          visibleToasts={3}
+          duration={3000}
+          toastOptions={{ className: "pm-toast" }}
+        />
       </body>
     </html>
   );

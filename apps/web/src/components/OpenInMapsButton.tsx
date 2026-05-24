@@ -2,6 +2,7 @@
 
 import { ExternalLink } from "lucide-react";
 import { Button } from "@pokermap/ui/button";
+import { track } from "@/lib/track";
 
 export type MapsTarget = { lat: number; lng: number; name: string; address: string };
 
@@ -77,6 +78,8 @@ export function OpenInMapsButton({
     const tg = typeof window !== "undefined" && Boolean(window.Telegram?.WebApp?.openLink);
     const platform = detectPlatform(ua, tg);
     const url = urlForPlatform(target, platform);
+
+    track("web.openinmaps_click", { name: target.name, platform });
 
     if (platform === "telegram") {
       window.Telegram!.WebApp!.openLink!(url);

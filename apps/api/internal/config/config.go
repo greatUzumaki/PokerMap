@@ -40,6 +40,10 @@ type Config struct {
 	CacheKeyPrefix       string        `envconfig:"CACHE_KEY_PREFIX" default:"pm:"`
 	SuperadminUsername   string        `envconfig:"SUPERADMIN_USERNAME" default:"admin"`
 	SuperadminPassword   string        `envconfig:"SUPERADMIN_PASSWORD"`
+	TelegramWebhookURL     string `envconfig:"TELEGRAM_WEBHOOK_URL"`
+	TelegramWebhookSecret  string `envconfig:"TELEGRAM_WEBHOOK_SECRET"`
+	MiniAppURL             string `envconfig:"MINI_APP_URL" default:"https://pargach.ru/poker"`
+	EventsRetentionDays    int    `envconfig:"EVENTS_RETENTION_DAYS" default:"30"`
 }
 
 func (c Config) IsProduction() bool {
@@ -71,6 +75,12 @@ func Load() (Config, error) {
 }
 
 func (c Config) validate() error {
+	if c.EventsRetentionDays <= 0 {
+		return errors.New("EVENTS_RETENTION_DAYS must be > 0")
+	}
+	if c.TelegramWebhookURL != "" && len(c.TelegramWebhookSecret) < 32 {
+		return errors.New("TELEGRAM_WEBHOOK_SECRET must be at least 32 bytes when TELEGRAM_WEBHOOK_URL is set")
+	}
 	if c.IsProduction() {
 		if warns := c.HasPlaceholderSecrets(); len(warns) > 0 {
 			return errors.New("production env contains placeholder secrets: " + strings.Join(warns, "; "))

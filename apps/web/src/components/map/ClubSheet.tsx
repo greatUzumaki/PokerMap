@@ -8,6 +8,7 @@ import { Badge } from "@pokermap/ui/badge";
 import { Button } from "@pokermap/ui/button";
 import { Phone, Globe, Send, MapPin, ExternalLink } from "lucide-react";
 import { OpenInMapsButton } from "@/components/OpenInMapsButton";
+import { TrackOnView } from "@/components/track/TrackOnView";
 
 const DAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
 const DAY_LABELS: Record<(typeof DAYS)[number], string> = {
@@ -47,6 +48,7 @@ export function ClubSheet({
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
+      {open ? <TrackOnView kind="web.club_view" payload={{ slug: club.slug }} /> : null}
       <DrawerContent className="max-h-[88dvh]">
         <DrawerHeader>
           <DrawerTitle className="text-xl">{club.name}</DrawerTitle>

@@ -145,6 +145,7 @@ jobs:
       REDIS_URL: ${{ secrets.REDIS_URL }}
       JWT_SECRET: ${{ secrets.JWT_SECRET }}
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_WEBHOOK_SECRET: ${{ secrets.TELEGRAM_WEBHOOK_SECRET }}
       SUPERADMIN_PASSWORD: ${{ secrets.SUPERADMIN_PASSWORD }}
       ADMIN_TELEGRAM_IDS: ${{ secrets.ADMIN_TELEGRAM_IDS }}
       MINIO_ENDPOINT: ${{ secrets.MINIO_ENDPOINT }}
@@ -189,6 +190,10 @@ jobs:
             echo "JWT_SECRET=${JWT_SECRET}"
             echo "JWT_TTL=168h"
             echo "TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}"
+            echo "TELEGRAM_WEBHOOK_URL=https://pargach.ru/poker/api/v1/tg/webhook"
+            echo "TELEGRAM_WEBHOOK_SECRET=${TELEGRAM_WEBHOOK_SECRET}"
+            echo "MINI_APP_URL=https://pargach.ru/poker"
+            echo "EVENTS_RETENTION_DAYS=30"
             echo "SUPERADMIN_USERNAME=admin"
             echo "SUPERADMIN_PASSWORD=${SUPERADMIN_PASSWORD}"
             echo "ADMIN_TELEGRAM_IDS=${ADMIN_TELEGRAM_IDS}"

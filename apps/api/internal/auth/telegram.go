@@ -22,11 +22,15 @@ var (
 )
 
 type TelegramUser struct {
-	ID        int64  `json:"id"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name,omitempty"`
-	Username  string `json:"username,omitempty"`
-	IsPremium bool   `json:"is_premium,omitempty"`
+	ID              int64  `json:"id"`
+	FirstName       string `json:"first_name"`
+	LastName        string `json:"last_name,omitempty"`
+	Username        string `json:"username,omitempty"`
+	LanguageCode    string `json:"language_code,omitempty"`
+	IsPremium       bool   `json:"is_premium,omitempty"`
+	IsBot           bool   `json:"is_bot,omitempty"`
+	PhotoURL        string `json:"photo_url,omitempty"`
+	AllowsWriteToPM *bool  `json:"allows_write_to_pm,omitempty"`
 }
 
 // VerifyInitData validates the Telegram Mini App initData payload.

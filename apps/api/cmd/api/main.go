@@ -5,20 +5,24 @@ import (
 	"log/slog"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pokermap/api/internal/auth"
 	"github.com/pokermap/api/internal/authh"
+	"github.com/pokermap/api/internal/bot"
 	"github.com/pokermap/api/internal/cache"
 	"github.com/pokermap/api/internal/clubs"
 	"github.com/pokermap/api/internal/config"
 	"github.com/pokermap/api/internal/db"
+	"github.com/pokermap/api/internal/events"
 	"github.com/pokermap/api/internal/health"
 	"github.com/pokermap/api/internal/media"
 	"github.com/pokermap/api/internal/middleware"
 	"github.com/pokermap/api/internal/router"
 	"github.com/pokermap/api/internal/server"
 	"github.com/pokermap/api/internal/uploads"
+	"github.com/pokermap/api/internal/users"
 )
 
 func main() {
@@ -53,6 +57,8 @@ func run() error {
 		return err
 	}
 	queries := db.New(pool)
+	userStore := users.New(pool)
+	eventStore := events.New(pool)
 
 	mediaSvc, err := media.New(media.Config{
 		Endpoint:     cfg.MinioEndpoint,
@@ -74,11 +80,11 @@ func run() error {
 	}
 	defer cacheClient.Close()
 
-	seedAdminsFromEnv(ctx, queries, cfg.AdminTelegramIDs, logger)
+	seedAdminsFromEnv(ctx, queries, userStore, cfg.AdminTelegramIDs, logger)
 
 	issuer := auth.NewJWTIssuer(cfg.JWTSecret, cfg.JWTTTL)
 	hasPlaceholder := len(cfg.HasPlaceholderSecrets()) > 0
-	authHandler := authh.New(queries, issuer, cfg.TelegramBotToken, cfg.IsProduction(), hasPlaceholder)
+	authHandler := authh.New(queries, issuer, cfg.TelegramBotToken, cfg.IsProduction(), hasPlaceholder, userStore, eventStore)
 	loginHandler := authh.NewLogin(cfg.SuperadminUsername, cfg.SuperadminPassword, issuer, cfg.IsProduction())
 	if !loginHandler.Enabled() {
 		logger.Warn("superadmin login disabled (SUPERADMIN_PASSWORD empty)")
@@ -86,15 +92,43 @@ func run() error {
 		logger.Info("superadmin login enabled", "username", cfg.SuperadminUsername)
 	}
 
+	eventsHandler := events.NewHandler(eventStore, cacheClient.Raw())
+	botHandler := bot.NewHandler(
+		cfg.TelegramBotToken,
+		cfg.TelegramWebhookSecret,
+		cfg.MiniAppURL,
+		userStore,
+		eventStore,
+		logger,
+	)
+
+	// Self-heal the bot webhook in the background; never block startup.
+	if cfg.TelegramWebhookURL != "" {
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			if err := bot.EnsureWebhook(ctx, cfg.TelegramBotToken, cfg.TelegramWebhookURL, cfg.TelegramWebhookSecret, logger); err != nil {
+				logger.Warn("bot.EnsureWebhook", "err", err)
+			}
+		}()
+	}
+
+	// Retention loop runs forever in the background, first sweep ~1 min after boot.
+	go events.RunRetentionLoop(ctx, eventStore, cfg.EventsRetentionDays, time.Minute, logger)
+
 	deps := router.Deps{
 		Logger:            logger,
 		CORSOrigins:       cfg.CORSAllowedOrigins,
 		Health:            health.New(pool, mediaSvc, cacheClient),
 		Auth:              authHandler,
 		Login:             loginHandler,
-		Clubs:             clubs.New(queries, cacheClient, cfg.CacheTTL, logger),
+		Clubs:             clubs.New(queries, cacheClient, eventStore, cfg.CacheTTL, logger),
 		Uploads:           uploads.New(mediaSvc),
 		SessionMiddleware: middleware.Session(issuer),
+		LastSeen:          middleware.LastSeen(cacheClient.Raw(), userStore, logger),
+		Events:            eventsHandler,
+		Bot:               botHandler,
+		Users:             userStore,
 	}
 
 	return server.Run(ctx, server.Options{
@@ -116,7 +150,7 @@ func newLogger(level string, json bool) *slog.Logger {
 	return slog.New(slog.NewTextHandler(os.Stdout, opts))
 }
 
-func seedAdminsFromEnv(ctx context.Context, q *db.Queries, ids []int64, logger *slog.Logger) {
+func seedAdminsFromEnv(ctx context.Context, q *db.Queries, us *users.Store, ids []int64, logger *slog.Logger) {
 	if len(ids) == 0 {
 		return
 	}
@@ -129,6 +163,11 @@ func seedAdminsFromEnv(ctx context.Context, q *db.Queries, ids []int64, logger *
 		return
 	}
 	for _, id := range ids {
+		// FK admins → users requires a row.
+		if err := us.EnsureExists(ctx, id); err != nil {
+			logger.Warn("ensure user exists", "id", id, "err", err)
+			continue
+		}
 		if err := q.UpsertAdmin(ctx, id, "seeded"); err != nil {
 			logger.Warn("seed admin", "id", id, "err", err)
 			continue

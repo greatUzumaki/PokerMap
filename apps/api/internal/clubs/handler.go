@@ -17,6 +17,7 @@ import (
 	"github.com/pokermap/api/internal/cache"
 	"github.com/pokermap/api/internal/cursor"
 	"github.com/pokermap/api/internal/db"
+	"github.com/pokermap/api/internal/events"
 	"github.com/pokermap/api/internal/httpx"
 	"github.com/pokermap/api/internal/validate"
 )
@@ -24,15 +25,16 @@ import (
 type Handler struct {
 	Q      *db.Queries
 	Cache  cache.Cache
+	Events *events.Store
 	TTL    time.Duration
 	Logger *slog.Logger
 }
 
-func New(q *db.Queries, c cache.Cache, ttl time.Duration, logger *slog.Logger) *Handler {
+func New(q *db.Queries, c cache.Cache, ev *events.Store, ttl time.Duration, logger *slog.Logger) *Handler {
 	if ttl <= 0 {
 		ttl = 60 * time.Second
 	}
-	return &Handler{Q: q, Cache: c, TTL: ttl, Logger: logger}
+	return &Handler{Q: q, Cache: c, Events: ev, TTL: ttl, Logger: logger}
 }
 
 func (h *Handler) invalidate(r *http.Request) {
@@ -318,7 +320,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, r, http.StatusInternalServerError, "internal", err.Error())
 		return
 	}
-	h.writeAudit(r, "create", created.ID, map[string]any{"after": ToDTO(created)})
+	h.recordEvent(r, events.KindAdminClubCreate, created.ID, map[string]any{"after": ToDTO(created)})
 	h.invalidate(r)
 	w.Header().Set("Location", "/v1/admin/clubs/"+created.ID.String())
 	httpx.JSON(w, http.StatusCreated, ToDTO(created))
@@ -399,7 +401,7 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, r, http.StatusInternalServerError, "internal", err.Error())
 		return
 	}
-	h.writeAudit(r, "update", id, map[string]any{"before": ToDTO(before), "after": ToDTO(after)})
+	h.recordEvent(r, events.KindAdminClubUpdate, id, map[string]any{"before": ToDTO(before), "after": ToDTO(after)})
 	h.invalidate(r)
 	httpx.JSON(w, http.StatusOK, ToDTO(after))
 }
@@ -419,7 +421,7 @@ func (h *Handler) archive(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, r, http.StatusInternalServerError, "internal", err.Error())
 		return
 	}
-	h.writeAudit(r, "archive", id, map[string]any{"after": ToDTO(c)})
+	h.recordEvent(r, events.KindAdminClubArchive, id, map[string]any{"after": ToDTO(c)})
 	h.invalidate(r)
 	httpx.JSON(w, http.StatusOK, ToDTO(c))
 }
@@ -430,26 +432,35 @@ func (h *Handler) history(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, r, http.StatusBadRequest, "invalid_id", "id must be a uuid")
 		return
 	}
-	rows, err := h.Q.ListAuditLogForEntity(r.Context(), "club", id, 200)
+	entityType := "club"
+	res, err := h.Events.List(r.Context(), events.ListFilters{
+		Limit: 200,
+	})
+	_ = entityType // listing currently has no entity filter; we filter in-memory below
 	if err != nil {
 		httpx.Error(w, r, http.StatusInternalServerError, "internal", err.Error())
 		return
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"items": rows})
+	out := make([]events.Event, 0, len(res.Items))
+	for _, ev := range res.Items {
+		if ev.EntityID != nil && *ev.EntityID == id && ev.EntityType != nil && *ev.EntityType == "club" {
+			out = append(out, ev)
+		}
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"items": out})
 }
 
-func (h *Handler) writeAudit(r *http.Request, action string, id uuid.UUID, diff map[string]any) {
+func (h *Handler) recordEvent(r *http.Request, kind events.Kind, id uuid.UUID, diff map[string]any) {
 	user, ok := auth.FromContext(r.Context())
 	if !ok {
 		return
 	}
-	b, _ := json.Marshal(diff)
-	_ = h.Q.InsertAuditLog(r.Context(), db.InsertAuditLogParams{
-		Actor:      user.TelegramUserID,
-		Action:     action,
-		EntityType: "club",
-		EntityID:   id,
-		Diff:       b,
+	_ = h.Events.Record(r.Context(), events.RecordInput{
+		Kind:           kind,
+		TelegramUserID: user.TelegramUserID,
+		EntityType:     "club",
+		EntityID:       id,
+		Payload:        diff,
 	})
 }
 

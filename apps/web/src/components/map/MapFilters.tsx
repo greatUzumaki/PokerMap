@@ -25,6 +25,7 @@ import {
   useClubFilters,
   type ClubFilters,
 } from "@/hooks/useClubFilters";
+import { track } from "@/lib/track";
 
 const GAME_LABELS: Record<Game, string> = {
   NLH: "NLH",
@@ -76,11 +77,19 @@ export function MapFilters() {
 
   const apply = () => {
     setFilters(draft);
+    track("web.filter_apply", {
+      openNow: draft.openNow,
+      games: draft.games,
+      types: draft.types,
+      minBuyIn: draft.minBuyIn,
+      maxBuyIn: draft.maxBuyIn,
+    });
     setOpen(false);
   };
   const reset = () => {
     setDraft(defaultFilters);
     resetFilters();
+    track("web.filter_reset");
     setOpen(false);
   };
 
@@ -90,7 +99,7 @@ export function MapFilters() {
         <Button
           variant="secondary"
           size="lg"
-          className="pointer-events-auto fixed left-4 top-4 z-30 gap-2 rounded-full shadow-lg"
+          className="pointer-events-auto fixed left-1/2 z-30 -translate-x-1/2 gap-2 rounded-full shadow-lg top-[calc(env(safe-area-inset-top,0px)+var(--tg-inset-top,1rem))]"
           aria-label="Открыть фильтры"
         >
           <SlidersHorizontal className="h-4 w-4" />
