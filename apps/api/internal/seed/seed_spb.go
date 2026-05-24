@@ -1,3 +1,16 @@
+// Package seed ships a curated catalog of Saint Petersburg sport-poker clubs.
+//
+// Inclusion criteria (any seeded venue MUST satisfy all):
+//   - Legal sport-poker format (rating-only, no monetary prizes, no rake).
+//   - Fixed organisational fee (`entry_fee_cents`) ≤ 1500 ₽.
+//   - Verified address or, if location rotates, a public Telegram channel
+//     where each event's venue is announced.
+//   - Active in the last 30 days (verify Telegram or Instagram posts).
+//
+// Cash venues, PPPoker-based clubs, and anything advertising buy-ins or rake
+// MUST NOT be added — the public catalog stays clean of grey-zone operators.
+// When a venue closes or changes format, its slug moves into
+// `legacyDemoSlugs` so the seeder deletes it on the next run.
 package seed
 
 import (
@@ -7,9 +20,11 @@ import (
 	"github.com/pokermap/api/internal/db"
 )
 
-// legacyDemoSlugs were inserted by the original Demo seed. They are deleted
-// on every Run so an environment that previously seeded the demo data
-// converges on the real SPB catalog.
+// legacyDemoSlugs lists every slug that must be deleted by every Run, ahead
+// of the upsert pass. It carries:
+//   - the original Demo seeder rows (`royal-poker-club`, etc.), and
+//   - cash-game venues retired in 2026-05 when the catalog was narrowed to
+//     sport-poker-only.
 var legacyDemoSlugs = []string{
 	"royal-poker-club",
 	"neva-cardroom",
@@ -17,6 +32,11 @@ var legacyDemoSlugs = []string{
 	"moskovsky-poker",
 	"vasilevsky-card",
 	"kupchino-poker",
+	"bluff",
+	"pulse",
+	"elo-club",
+	"obriens-poker",
+	"cromulent-club",
 }
 
 func everyDayHours(open, close string) clubs.WorkingHours {
@@ -35,80 +55,148 @@ func mustJSON(v any) json.RawMessage {
 	return b
 }
 
-// spbClubs is the curated catalog of real Saint Petersburg poker venues used
-// by the seeder. Each entry cites the source URL it was checked against.
-// Coordinates are approximate; operators should verify and edit in the admin.
 var spbClubs = []db.CreateClubParams{
-	// source: https://2gis.ru/spb/search/Покер%20клуб (Bluff), checked: 2026-05-24
+	// source: https://yandex.com/maps/org/badbeat/78255914436/ + https://www.instagram.com/bad_beat_pokerclub/, checked: 2026-05-24
 	{
-		Slug:    "bluff",
-		Name:    "Bluff",
-		Address: "Санкт-Петербург, Фурштатская ул., 44",
-		Lat:     59.9456,
-		Lng:     30.3666,
-		Description: "Покерный клуб в центре, кэш-игры NLH/PLO, дневные и вечерние турниры. " +
-			"Адрес и телефоны актуализируйте по 2GIS перед публикацией.",
-		Phones:          []string{},
-		Website:         nil,
-		TelegramURL:     ptrS("https://t.me/blefach"),
-		WorkingHours:    mustJSON(everyDayHours("18:00", "06:00")),
-		Games:           []string{"NLH", "PLO", "MTT"},
-		MinBuyInCents:   ptrI64(500000),
-		MaxBuyInCents:   ptrI64(5000000),
-		EntryFeeCents:   nil,
-		RakeDescription: "5% капкан 1000₽",
-		PhotoKeys:       []string{},
-		ClubType:        string(clubs.ClubTypeCash),
-		SocialLinks:     mustJSON(clubs.SocialLinks{TelegramChannel: "https://t.me/blefach"}),
-		Status:          db.ClubStatusPublished,
-	},
-	// source: https://2gis.ru/spb/search/Покер%20клуб (Pulse), checked: 2026-05-24
-	{
-		Slug:            "pulse",
-		Name:            "Pulse",
-		Address:         "Санкт-Петербург, Бугский пер., 3, ТОЦ «Андреевский двор» (В.О.)",
-		Lat:             59.9437,
-		Lng:             30.2802,
-		Description:     "Спортивный покерный клуб на Васильевском острове. Турниры и кэш-игры.",
-		Phones:          []string{},
-		WorkingHours:    mustJSON(everyDayHours("19:00", "07:00")),
+		Slug:    "bad-beat",
+		Name:    "Bad Beat",
+		Address: "Санкт-Петербург, 8-я Советская ул., 4, 2 этаж",
+		Lat:     59.9389,
+		Lng:     30.3793,
+		Description: "Покерный клуб не на деньги в центре Петербурга. Турниры с фиксированным оргвзносом, " +
+			"рейтинговая система, без призовых. Регистрация — через Telegram-канал клуба.",
+		Phones:          []string{"+7 (903) 431-33-33"},
+		TelegramURL:     ptrS("https://t.me/bad_beat_club"),
+		WorkingHours:    mustJSON(everyDayHours("19:00", "02:00")),
 		Games:           []string{"NLH", "MTT"},
-		MinBuyInCents:   ptrI64(300000),
-		MaxBuyInCents:   ptrI64(2000000),
-		RakeDescription: "5% капкан 800₽",
+		MinBuyInCents:   nil,
+		MaxBuyInCents:   nil,
+		EntryFeeCents:   ptrI64(100000),
+		RakeDescription: "",
+		PhotoKeys:       []string{},
+		ClubType:        string(clubs.ClubTypeMTTSeries),
+		SocialLinks: mustJSON(clubs.SocialLinks{
+			TelegramChannel: "https://t.me/bad_beat_club",
+			Instagram:       "https://www.instagram.com/bad_beat_pokerclub/",
+		}),
+		Status: db.ClubStatusPublished,
+	},
+
+	// source: https://raiseclubspb.ru/, checked: 2026-05-24
+	{
+		Slug:    "raise-club",
+		Name:    "Raise Club",
+		Address: "Санкт-Петербург, Кожевенная линия, 30, лофт Brosko (Севкабель Порт)",
+		Lat:     59.9264,
+		Lng:     30.2491,
+		Description: "Сообщество спортивного покера. Турниры ежедневно с 19:00. " +
+			"Рейтинговая система, без денежных ставок и призов.",
+		Phones:          []string{},
+		Website:         ptrS("https://raiseclubspb.ru/"),
+		WorkingHours:    mustJSON(everyDayHours("19:00", "02:00")),
+		Games:           []string{"NLH", "MTT"},
+		MinBuyInCents:   nil,
+		MaxBuyInCents:   nil,
+		EntryFeeCents:   ptrI64(100000),
+		RakeDescription: "",
 		PhotoKeys:       []string{},
 		ClubType:        string(clubs.ClubTypeMTTSeries),
 		SocialLinks:     mustJSON(clubs.SocialLinks{}),
 		Status:          db.ClubStatusPublished,
 	},
-	// source: https://2gis.ru/spb/search/Покер%20клуб (Эло клуб), checked: 2026-05-24
+
+	// source: https://spb-poker-club.ru/ + https://t.me/spb_poker_club, checked: 2026-05-24
+	// NOTE: venue rotates between Loft Plan B (Арсенальная 2) and Обводный 118АУ;
+	// admin should update address per actual booking.
 	{
-		Slug:            "elo-club",
-		Name:            "Эло клуб",
-		Address:         "Санкт-Петербург, Каменноостровский пр., 10 лит. Б",
-		Lat:             59.9577,
-		Lng:             30.3175,
-		Description:     "Игровой клуб на Петроградке. Покерные вечера и турниры по выходным.",
+		Slug:    "spb-poker-club",
+		Name:    "SPB Poker Club",
+		Address: "Санкт-Петербург, наб. Обводного канала, 118АУ (актуальная локация — в TG-канале)",
+		Lat:     59.9148,
+		Lng:     30.3460,
+		Description: "Спортивный покер не на деньги. Регулярные турниры: Nit Stack для новичков, " +
+			"классический Boom Pot, нокаут-турнир Mystery. Регистрация и адрес — в TG-канале.",
 		Phones:          []string{},
-		WorkingHours:    mustJSON(everyDayHours("18:00", "04:00")),
-		Games:           []string{"NLH", "Mixed"},
-		MinBuyInCents:   ptrI64(200000),
-		MaxBuyInCents:   ptrI64(1000000),
-		RakeDescription: "3% капкан 600₽",
+		Website:         ptrS("https://spb-poker-club.ru/"),
+		TelegramURL:     ptrS("https://t.me/spb_poker_club"),
+		WorkingHours:    mustJSON(everyDayHours("19:00", "02:00")),
+		Games:           []string{"NLH", "MTT"},
+		MinBuyInCents:   nil,
+		MaxBuyInCents:   nil,
+		EntryFeeCents:   ptrI64(100000),
+		RakeDescription: "",
 		PhotoKeys:       []string{},
-		ClubType:        string(clubs.ClubTypeClub),
-		SocialLinks:     mustJSON(clubs.SocialLinks{}),
-		Status:          db.ClubStatusPublished,
+		ClubType:        string(clubs.ClubTypeMTTSeries),
+		SocialLinks: mustJSON(clubs.SocialLinks{
+			TelegramChannel: "https://t.me/spb_poker_club",
+		}),
+		Status: db.ClubStatusPublished,
 	},
-	// source: https://www.fiesta.ru/spb/places/klub-saint-pokersburg-dlya-igrokov-v-poker-i-mafiyu/, checked: 2026-05-24
+
+	// source: https://t.me/overbetspb + https://www.instagram.com/pokerspb_club/, checked: 2026-05-24
+	// Draft until a stable physical venue is published — events rotate, booked via TG.
 	{
-		Slug:            "saint-pokersburg",
-		Name:            "Saint-Pokersburg",
-		Address:         "Санкт-Петербург, Невский пр., в лаунж-баре Mysterium",
-		Lat:             59.9310,
-		Lng:             30.3585,
-		Description:     "Интеллектуальный клуб с турнирами по покеру и «Мафии» на любительском уровне.",
+		Slug:    "overbet-club",
+		Name:    "Overbet Club",
+		Address: "Санкт-Петербург (локация уточняется через TG-канал)",
+		Lat:     59.9343,
+		Lng:     30.3351,
+		Description: "Покер не на деньги. Турниры ежедневно, рейтинговая система. " +
+			"Адрес проведения и регистрация — через Telegram-канал.",
 		Phones:          []string{},
+		TelegramURL:     ptrS("https://t.me/overbetspb"),
+		WorkingHours:    mustJSON(everyDayHours("19:00", "02:00")),
+		Games:           []string{"NLH", "MTT"},
+		MinBuyInCents:   nil,
+		MaxBuyInCents:   nil,
+		EntryFeeCents:   ptrI64(100000),
+		RakeDescription: "",
+		PhotoKeys:       []string{},
+		ClubType:        string(clubs.ClubTypeMTTSeries),
+		SocialLinks: mustJSON(clubs.SocialLinks{
+			TelegramChannel: "https://t.me/overbetspb",
+			Instagram:       "https://www.instagram.com/pokerspb_club/",
+		}),
+		Status: db.ClubStatusDraft,
+	},
+
+	// source: http://jokerclubspb.ru/ + https://t.me/joker_club_spb, checked: 2026-05-24
+	{
+		Slug:    "joker-club-spb",
+		Name:    "Joker Club SPB",
+		Address: "Санкт-Петербург, пр. Науки, 25",
+		Lat:     60.0067,
+		Lng:     30.3957,
+		Description: "Спортивно-развлекательное сообщество. Покер и мафия не на деньги, " +
+			"ежедневные турниры. Оргвзнос 1000 ₽, рейтинговая система.",
+		Phones:          []string{"+7 (995) 629-37-85"},
+		Website:         ptrS("http://jokerclubspb.ru/"),
+		TelegramURL:     ptrS("https://t.me/joker_club_spb"),
+		WorkingHours:    mustJSON(everyDayHours("19:00", "23:59")),
+		Games:           []string{"NLH", "MTT", "Mixed"},
+		MinBuyInCents:   nil,
+		MaxBuyInCents:   nil,
+		EntryFeeCents:   ptrI64(100000),
+		RakeDescription: "",
+		PhotoKeys:       []string{},
+		ClubType:        string(clubs.ClubTypeMafiaAndPoker),
+		SocialLinks: mustJSON(clubs.SocialLinks{
+			TelegramChannel: "https://t.me/joker_club_spb",
+		}),
+		Status: db.ClubStatusPublished,
+	},
+
+	// source: https://www.fiesta.ru/spb/places/klub-saint-pokersburg-dlya-igrokov-v-poker-i-mafiyu/ + https://yandex.ru/maps/org/mysterium/144388469235, checked: 2026-05-24
+	{
+		Slug:    "saint-pokersburg",
+		Name:    "Saint-Pokersburg",
+		Address: "Санкт-Петербург, Невский пр., 65, 6 этаж (лаунж-бар Mysterium)",
+		Lat:     59.9311,
+		Lng:     30.3604,
+		Description: "Клуб для игроков в покер и «Мафию» на 6 этаже исторического особняка. " +
+			"Турниры не на деньги, рейтинговая система, тематический интерьер царской эпохи.",
+		Phones:  []string{},
+		Website: nil,
 		WorkingHours: mustJSON(clubs.WorkingHours{
 			Mon: clubs.DaySchedule{Closed: true},
 			Tue: clubs.DaySchedule{Closed: true},
@@ -118,85 +206,14 @@ var spbClubs = []db.CreateClubParams{
 			Sat: clubs.DaySchedule{Slots: []clubs.DaySlot{{Open: "18:00", Close: "01:00"}}},
 			Sun: clubs.DaySchedule{Slots: []clubs.DaySlot{{Open: "18:00", Close: "23:00"}}},
 		}),
-		Games:           []string{"MTT", "Mixed"},
+		Games:           []string{"NLH", "MTT", "Mixed"},
 		MinBuyInCents:   nil,
 		MaxBuyInCents:   nil,
 		EntryFeeCents:   ptrI64(150000),
-		RakeDescription: "Фиксированный взнос, без рейка",
+		RakeDescription: "",
 		PhotoKeys:       []string{},
 		ClubType:        string(clubs.ClubTypeMafiaAndPoker),
 		SocialLinks:     mustJSON(clubs.SocialLinks{}),
 		Status:          db.ClubStatusPublished,
-	},
-	// source: https://www.obriens.ru/poker, checked: 2026-05-24
-	{
-		Slug:            "obriens-poker",
-		Name:            "O'Briens Poker",
-		Address:         "Санкт-Петербург, Невский пр., 25 (паб O'Briens)",
-		Lat:             59.9356,
-		Lng:             30.3270,
-		Description:     "Покерные вечера в ирландском пабе O'Briens. Турниры по расписанию.",
-		Phones:          []string{},
-		Website:         ptrS("https://www.obriens.ru/poker"),
-		WorkingHours: mustJSON(clubs.WorkingHours{
-			Mon: clubs.DaySchedule{Closed: true},
-			Tue: clubs.DaySchedule{Slots: []clubs.DaySlot{{Open: "20:00", Close: "02:00"}}},
-			Wed: clubs.DaySchedule{Closed: true},
-			Thu: clubs.DaySchedule{Slots: []clubs.DaySlot{{Open: "20:00", Close: "02:00"}}},
-			Fri: clubs.DaySchedule{Closed: true},
-			Sat: clubs.DaySchedule{Slots: []clubs.DaySlot{{Open: "19:00", Close: "02:00"}}},
-			Sun: clubs.DaySchedule{Closed: true},
-		}),
-		Games:           []string{"NLH", "MTT"},
-		MinBuyInCents:   ptrI64(150000),
-		MaxBuyInCents:   ptrI64(500000),
-		RakeDescription: "Турнирный взнос",
-		PhotoKeys:       []string{},
-		ClubType:        string(clubs.ClubTypeMTTSeries),
-		SocialLinks:     mustJSON(clubs.SocialLinks{}),
-		Status:          db.ClubStatusPublished,
-	},
-	// source: https://cromulentclub.orgs.biz/, checked: 2026-05-24
-	{
-		Slug:            "cromulent-club",
-		Name:            "Cromulent Club",
-		Address:         "Санкт-Петербург, Владимирский пр., 15 (вход в арке)",
-		Lat:             59.9296,
-		Lng:             30.3494,
-		Description:     "Покерный клуб на платформе PPPoker. Контакт для записи — в Telegram или WhatsApp.",
-		Phones:          []string{"+7 (953) 344-33-36"},
-		TelegramURL:     ptrS("https://t.me/+79533443336"),
-		WorkingHours:    mustJSON(everyDayHours("20:00", "06:00")),
-		Games:           []string{"NLH", "PLO"},
-		MinBuyInCents:   ptrI64(1000000),
-		MaxBuyInCents:   ptrI64(10000000),
-		RakeDescription: "5% капкан 1500₽",
-		PhotoKeys:       []string{},
-		ClubType:        string(clubs.ClubTypeUnderground),
-		SocialLinks:     mustJSON(clubs.SocialLinks{}),
-		Status:          db.ClubStatusPublished,
-	},
-	// source: http://jokerclubspb.ru/, checked: 2026-05-24
-	// NOTE: address not published on the site; placeholder coords near centre.
-	// Operator should update with verified address before publication.
-	{
-		Slug:            "joker-club-spb",
-		Name:            "Joker Club SPB",
-		Address:         "Санкт-Петербург (адрес уточняется)",
-		Lat:             59.9343,
-		Lng:             30.3351,
-		Description:     "Спортивно-развлекательный клуб по покеру не на деньги. Любительские турниры.",
-		Phones:          []string{},
-		Website:         ptrS("http://jokerclubspb.ru/"),
-		WorkingHours:    mustJSON(everyDayHours("19:00", "23:59")),
-		Games:           []string{"MTT", "NLH"},
-		MinBuyInCents:   nil,
-		MaxBuyInCents:   nil,
-		EntryFeeCents:   ptrI64(50000),
-		RakeDescription: "Любительский формат, без денежных ставок",
-		PhotoKeys:       []string{},
-		ClubType:        string(clubs.ClubTypeMafiaAndPoker),
-		SocialLinks:     mustJSON(clubs.SocialLinks{}),
-		Status:          db.ClubStatusDraft,
 	},
 }

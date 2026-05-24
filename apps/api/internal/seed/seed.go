@@ -2,32 +2,69 @@ package seed
 
 import (
 	"context"
-	"errors"
 	"log/slog"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/pokermap/api/internal/db"
 )
 
-// Run prunes legacy demo rows and inserts the curated Saint Petersburg
-// catalog from seed_spb.go. New rows are inserted with idempotent slug
-// handling: a duplicate slug logs a warning and is skipped rather than
-// failing the run.
+const upsertClubSQL = `
+	INSERT INTO clubs (slug, name, address, lat, lng, description, phones, website, telegram_url,
+		working_hours, games, min_buy_in_cents, max_buy_in_cents, entry_fee_cents, rake_description,
+		photo_keys, club_type, social_links, status)
+	VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
+	ON CONFLICT (slug) DO UPDATE SET
+		name = EXCLUDED.name,
+		address = EXCLUDED.address,
+		lat = EXCLUDED.lat,
+		lng = EXCLUDED.lng,
+		description = EXCLUDED.description,
+		phones = EXCLUDED.phones,
+		website = EXCLUDED.website,
+		telegram_url = EXCLUDED.telegram_url,
+		working_hours = EXCLUDED.working_hours,
+		games = EXCLUDED.games,
+		min_buy_in_cents = EXCLUDED.min_buy_in_cents,
+		max_buy_in_cents = EXCLUDED.max_buy_in_cents,
+		entry_fee_cents = EXCLUDED.entry_fee_cents,
+		rake_description = EXCLUDED.rake_description,
+		photo_keys = EXCLUDED.photo_keys,
+		club_type = EXCLUDED.club_type,
+		social_links = EXCLUDED.social_links,
+		status = EXCLUDED.status,
+		updated_at = now()
+`
+
+// Run prunes legacy demo + retired cash slugs and upserts the curated Saint
+// Petersburg sport-poker catalog inside a single transaction so a crash midway
+// cannot leave the catalog half-applied.
 func Run(ctx context.Context, q *db.Queries, logger *slog.Logger) error {
-	if _, err := q.Pool().Exec(ctx,
+	tx, err := q.Pool().BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	if _, err := tx.Exec(ctx,
 		`DELETE FROM clubs WHERE slug = ANY($1)`, legacyDemoSlugs); err != nil {
-		logger.Warn("seed: prune legacy demo slugs", "err", err)
+		return err
 	}
+
 	for _, c := range spbClubs {
-		_, err := q.CreateClub(ctx, c)
-		if err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
-				continue
-			}
-			logger.Warn("seed: skipping club", "slug", c.Slug, "err", err)
-			continue
+		social := c.SocialLinks
+		if len(social) == 0 {
+			social = []byte(`{}`)
 		}
-		logger.Info("seed: inserted club", "slug", c.Slug)
+		if _, err := tx.Exec(ctx, upsertClubSQL,
+			c.Slug, c.Name, c.Address, c.Lat, c.Lng, c.Description, c.Phones,
+			c.Website, c.TelegramURL, c.WorkingHours, c.Games, c.MinBuyInCents,
+			c.MaxBuyInCents, c.EntryFeeCents, c.RakeDescription, c.PhotoKeys,
+			c.ClubType, social, c.Status,
+		); err != nil {
+			return err
+		}
+		logger.Info("seed: upserted club", "slug", c.Slug)
 	}
-	return nil
+
+	return tx.Commit(ctx)
 }

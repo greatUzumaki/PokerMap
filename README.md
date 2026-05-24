@@ -243,12 +243,18 @@ docker build -f apps/admin/Dockerfile -t pokermap-admin .
 
 ## Seed catalog
 
-The real Saint Petersburg club catalog used by the API seeder lives in
-`apps/api/internal/seed/seed_spb.go`. Each entry cites the public source URL
-it was checked against. Edit that file (or use the admin panel) to keep the
-catalog up to date. `apps/api/internal/seed/seed.go` prunes the legacy demo
-slugs (`royal-poker-club`, `neva-cardroom`, …) on every run so the new
-catalog converges.
+The Saint Petersburg club catalog used by the API seeder lives in
+`apps/api/internal/seed/seed_spb.go`. **Only legal sport-poker venues
+(rating-only, non-monetary, fixed organisational fee ≤ 1500 ₽) are eligible.**
+Cash venues, PPPoker-based clubs, and anything advertising buy-ins or rake
+are excluded by policy — see the package doc-comment in `seed_spb.go` for
+the full inclusion criteria.
+
+Each entry cites the public source URL it was checked against (club website,
+Telegram channel, 2GIS, Yandex Maps). `apps/api/internal/seed/seed.go`
+deletes retired slugs listed in `legacyDemoSlugs` and upserts the live
+catalog inside a single transaction on every boot, so the database
+converges idempotently.
 
 The public map and `/list` accept filter query params that are also the
 URL-persistent state for the on-map filter pill:
