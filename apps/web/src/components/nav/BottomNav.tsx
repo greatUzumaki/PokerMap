@@ -80,15 +80,15 @@ export function BottomNav() {
                     "relative inline-flex items-center justify-center transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                     isCenter
                       ? cn(
-                          "-my-4 mx-1 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/40 active:scale-95",
-                          active
-                            ? "scale-110 ring-2 ring-primary/30 ring-offset-2 ring-offset-background"
-                            : "scale-100 hover:scale-105",
-                        )
+                        "-my-4 mx-1 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/40 active:scale-95",
+                        active
+                          ? "scale-110 ring-2 ring-primary/30 ring-offset-2 ring-offset-background"
+                          : "scale-100 hover:scale-105",
+                      )
                       : cn(
-                          "h-10 gap-2 rounded-full px-3 text-sm font-medium md:px-4",
-                          active ? "text-primary" : "text-muted-foreground hover:text-foreground",
-                        ),
+                        "h-10 gap-2 rounded-full px-3 text-sm font-medium md:px-4",
+                        active ? "text-primary" : "text-muted-foreground hover:text-foreground",
+                      ),
                   )}
                 >
                   <Icon

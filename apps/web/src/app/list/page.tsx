@@ -45,7 +45,7 @@ export default async function ListPage({
 
   return (
     <div className="min-h-app bg-background">
-      <div className="mx-auto w-full max-w-2xl px-4 pb-32 pt-8 md:pt-12">
+      <div className="mx-auto w-full max-w-2xl px-4 pb-32 pt-[calc(env(safe-area-inset-top,0px)+var(--tg-page-pt,2rem))] md:pt-[calc(env(safe-area-inset-top,0px)+var(--tg-page-pt-md,3rem))]">
         <header className="mb-6 flex items-baseline justify-between">
           <h1 className="text-2xl font-semibold tracking-tight">Клубы</h1>
           <span className="text-sm tabular-nums text-muted-foreground">

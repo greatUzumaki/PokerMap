@@ -16,6 +16,14 @@ export function ViewportBridge() {
 
   useEffect(() => {
     if (typeof document === "undefined") return;
+    document.documentElement.dataset.tma = "true";
+    return () => {
+      delete document.documentElement.dataset.tma;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
     const h = height || window.innerHeight;
     document.documentElement.style.setProperty("--app-height", `${h}px`);
   }, [height]);

@@ -15,18 +15,24 @@ import { AuthBridge } from "./AuthBridge";
 
 export function TelegramProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
+  const [inTma, setInTma] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     const setup = async () => {
       try {
-        if (!(await isTMA())) {
+        const tma = await isTMA();
+        if (cancelled) return;
+        if (!tma) {
+          setReady(true);
           return;
         }
         init();
         mountThemeParams();
         mountBackButton();
         await mountViewport();
+        if (cancelled) return;
+        setInTma(true);
       } catch (err) {
         console.warn("telegram init skipped", err);
       } finally {
@@ -41,7 +47,7 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
 
   return (
     <>
-      {ready ? (
+      {ready && inTma ? (
         <>
           <ThemeBridge />
           <ViewportBridge />

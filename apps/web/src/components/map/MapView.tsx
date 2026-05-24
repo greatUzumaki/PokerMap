@@ -1,11 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import Map, {
-  type MapRef,
-  Marker,
-  NavigationControl,
-} from "react-map-gl/maplibre";
+import Map, { type MapRef, Marker } from "react-map-gl/maplibre";
 import type { Club } from "@pokermap/types";
 import { publicEnv, SPB_CENTER } from "@/lib/env";
 import { useTelegramHaptics } from "@/hooks/useTelegramHaptics";
@@ -59,7 +55,6 @@ export function MapView({ clubs }: { clubs: Club[] }) {
         attributionControl={false}
         reuseMaps
       >
-        <NavigationControl position="top-right" />
         {clubs.map((club) => {
           const active = selected?.id === club.id;
           return (
