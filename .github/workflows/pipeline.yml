@@ -228,6 +228,24 @@ jobs:
           echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
 
           docker compose pull
+
+          # Run DB migrations from the new api image before flipping containers.
+          # Migrations are baked into the api image at /app/migrations; we copy
+          # them out into a host tmpdir and run migrate/migrate against postgres
+          # on the shared `data` network.
+          set -a; . ./.env; set +a
+          MIG_DIR=$(mktemp -d)
+          API_IMAGE="${API_IMAGE:?API_IMAGE missing in .env}"
+          docker pull "$API_IMAGE"
+          TMP_CID=$(docker create "$API_IMAGE")
+          docker cp "$TMP_CID:/app/migrations" "$MIG_DIR/migrations"
+          docker rm -f "$TMP_CID" >/dev/null
+          docker run --rm --network data \
+            -v "$MIG_DIR/migrations:/migrations:ro" \
+            migrate/migrate:v4.18.1 \
+            -path=/migrations -database "$DATABASE_URL" up
+          rm -rf "$MIG_DIR"
+
           docker compose up -d --remove-orphans
 
           ok=1
