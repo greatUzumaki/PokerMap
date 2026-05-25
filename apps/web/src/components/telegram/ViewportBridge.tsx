@@ -3,7 +3,9 @@
 import { useEffect } from "react";
 import {
   expandViewport,
+  isChangingFullscreen,
   isFullscreen,
+  requestFullscreen,
   useSignal,
   viewportStableHeight,
 } from "@telegram-apps/sdk-react";
@@ -18,6 +20,19 @@ export function ViewportBridge() {
     } catch {
       // not in Telegram
     }
+
+    void (async () => {
+      if (isFullscreen() || isChangingFullscreen()) return;
+      if (!requestFullscreen.isAvailable()) return;
+      try {
+        await requestFullscreen();
+      } catch (err) {
+        const code = (err as { type?: string } | null)?.type;
+        if (code !== "ERR_FULLSCREEN_FAILED" && code !== "ERR_ALREADY_REQUESTING") {
+          console.warn("telegram fullscreen request skipped", err);
+        }
+      }
+    })();
   }, []);
 
   useEffect(() => {
